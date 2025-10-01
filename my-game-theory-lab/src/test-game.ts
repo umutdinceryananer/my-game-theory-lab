@@ -1,10 +1,12 @@
-import { Tournament } from './core/tournament';
+import { Tournament, type TournamentResult } from './core/tournament';
 import { defaultStrategies } from './strategies';
 
-export function testGameLogic(): void {
-  console.log('=== PRISONER\'S DILEMMA TOURNAMENT ===');
-  
+export function simulateTournament(rounds: number = 100): TournamentResult[] {
+  console.log("=== PRISONER'S DILEMMA TOURNAMENT ===");
+
   const tournament = new Tournament();
-  const results = tournament.run(defaultStrategies, 100);
+  const results = tournament.run(defaultStrategies, rounds);
   tournament.formatResults(results);
+
+  return results;
 }
