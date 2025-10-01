@@ -1,4 +1,5 @@
-import type { Strategy } from './types';
+import type { Strategy, PayoffMatrix } from './types';
+import { DEFAULT_PAYOFF_MATRIX } from './types';
 import { PrisonersDilemmaGame } from './game';
 
 export interface TournamentResult {
@@ -18,6 +19,7 @@ export class Tournament {
     strategies: Strategy[],
     roundsPerMatch: number = 100,
     errorRate: number = 0,
+    payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
   ): TournamentResult[] {
     if (strategies.length < 2) {
       throw new Error('Need at least 2 strategies');
@@ -29,7 +31,13 @@ export class Tournament {
     // Play all matches
     for (let i = 0; i < strategies.length; i++) {
       for (let j = i + 1; j < strategies.length; j++) {
-        const match = this.game.playMatch(strategies[i], strategies[j], roundsPerMatch, errorRate);
+        const match = this.game.playMatch(
+          strategies[i],
+          strategies[j],
+          roundsPerMatch,
+          errorRate,
+          payoffMatrix,
+        );
 
         // Update scores
         results[i].totalScore += match.player1Score;

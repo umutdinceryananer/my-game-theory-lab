@@ -1,17 +1,26 @@
-import type { Move, Strategy } from './types';
+import type { Move, Strategy, PayoffMatrix } from './types';
+import { DEFAULT_PAYOFF_MATRIX } from './types';
 
 // Simple game - just the essentials
 export class PrisonersDilemmaGame {
-  // Fixed payoff matrix
-  private static readonly PAYOFFS = {
-    'COOPERATE-COOPERATE': [3, 3],
-    'COOPERATE-DEFECT': [0, 5],
-    'DEFECT-COOPERATE': [5, 0],
-    'DEFECT-DEFECT': [1, 1],
-  } as const;
-
   private static invertMove(move: Move): Move {
     return move === 'COOPERATE' ? 'DEFECT' : 'COOPERATE';
+  }
+
+  private static getPayoffs(matrix: PayoffMatrix, move1: Move, move2: Move): [number, number] {
+    if (move1 === 'COOPERATE' && move2 === 'COOPERATE') {
+      return [matrix.reward, matrix.reward];
+    }
+
+    if (move1 === 'COOPERATE' && move2 === 'DEFECT') {
+      return [matrix.sucker, matrix.temptation];
+    }
+
+    if (move1 === 'DEFECT' && move2 === 'COOPERATE') {
+      return [matrix.temptation, matrix.sucker];
+    }
+
+    return [matrix.punishment, matrix.punishment];
   }
 
   /**
@@ -22,6 +31,7 @@ export class PrisonersDilemmaGame {
     strategy2: Strategy,
     rounds: number = 100,
     errorRate: number = 0,
+    payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
   ) {
     let score1 = 0;
     let score2 = 0;
@@ -51,9 +61,7 @@ export class PrisonersDilemmaGame {
         if (Math.random() < errorRate) move2 = PrisonersDilemmaGame.invertMove(move2);
       }
 
-      // Calculate and add scores
-      const key = `${move1}-${move2}` as keyof typeof PrisonersDilemmaGame.PAYOFFS;
-      const [points1, points2] = PrisonersDilemmaGame.PAYOFFS[key];
+      const [points1, points2] = PrisonersDilemmaGame.getPayoffs(payoffMatrix, move1, move2);
 
       score1 += points1;
       score2 += points2;

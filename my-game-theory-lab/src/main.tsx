@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix } from '@/core/types';
 import { cn } from '@/lib/utils';
 import type { TournamentResult } from '@/core/tournament';
 import { simulateTournament } from '@/test-game';
@@ -37,6 +38,8 @@ type DashboardProps = {
   onNoiseToggle: (enabled: boolean) => void;
   noisePercent: number;
   onNoisePercentChange: (value: number) => void;
+  payoffMatrix: PayoffMatrix;
+  onPayoffMatrixChange: (matrix: PayoffMatrix) => void;
 };
 
 function TournamentDashboard({
@@ -48,6 +51,8 @@ function TournamentDashboard({
   onNoiseToggle,
   noisePercent,
   onNoisePercentChange,
+  payoffMatrix,
+  onPayoffMatrixChange,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
@@ -81,6 +86,8 @@ function TournamentDashboard({
           onNoiseToggle={onNoiseToggle}
           noisePercent={noisePercent}
           onNoisePercentChange={onNoisePercentChange}
+          payoffMatrix={payoffMatrix}
+          onPayoffMatrixChange={onPayoffMatrixChange}
         />
 
         <section className="space-y-2">
@@ -172,11 +179,12 @@ function App() {
   const [roundsPerMatch, setRoundsPerMatch] = useState(100);
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [noisePercent, setNoisePercent] = useState(10);
+  const [payoffMatrix, setPayoffMatrix] = useState<PayoffMatrix>(() => ({ ...DEFAULT_PAYOFF_MATRIX }));
 
   const runTournament = () => {
     console.clear();
     const errorRate = noiseEnabled ? noisePercent / 100 : 0;
-    const outcome = simulateTournament(roundsPerMatch, errorRate);
+    const outcome = simulateTournament(roundsPerMatch, errorRate, payoffMatrix);
     setResults(outcome);
   };
 
@@ -209,6 +217,8 @@ function App() {
             onNoiseToggle={setNoiseEnabled}
             noisePercent={noisePercent}
             onNoisePercentChange={setNoisePercent}
+            payoffMatrix={payoffMatrix}
+            onPayoffMatrixChange={setPayoffMatrix}
           />
         ) : (
           <LandingScreen onStart={handleEnterLab} isFadingOut={isLandingFading} />
