@@ -24,6 +24,7 @@ export class Tournament {
     errorRate: number = 0,
     payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
     seed?: number | string,
+    doubleRoundRobin: boolean = false,
   ): TournamentResult[] {
     if (strategies.length < 2) {
       throw new Error('Need at least 2 strategies');
@@ -56,13 +57,32 @@ export class Tournament {
         // Update scores
         results[i].totalScore += match.player1Score;
         results[j].totalScore += match.player2Score;
-
         results[i].matchesPlayed += 1;
         results[j].matchesPlayed += 1;
 
         // Count wins
         if (match.player1Score > match.player2Score) results[i].wins++;
         else if (match.player2Score > match.player1Score) results[j].wins++;
+
+        if (doubleRoundRobin) {
+          const randomSourceRematch = seededRandom ?? createRandomSource();
+          const rematch = this.game.playMatch(
+            strategies[j],
+            strategies[i],
+            roundsPerMatch,
+            errorRate,
+            payoffMatrix,
+            randomSourceRematch,
+          );
+
+          results[i].totalScore += rematch.player2Score;
+          results[j].totalScore += rematch.player1Score;
+          results[i].matchesPlayed += 1;
+          results[j].matchesPlayed += 1;
+
+          if (rematch.player2Score > rematch.player1Score) results[i].wins++;
+          else if (rematch.player1Score > rematch.player2Score) results[j].wins++;
+        }
       }
     }
 

@@ -24,6 +24,8 @@ export type SimulationParametersProps = {
   seedValue: string;
   onSeedToggle: (enabled: boolean) => void;
   onSeedChange: (value: string) => void;
+  doubleRoundRobin: boolean;
+  onDoubleRoundRobinToggle: (enabled: boolean) => void;
 };
 
 export function SimulationParametersPanel({
@@ -39,6 +41,8 @@ export function SimulationParametersPanel({
   seedValue,
   onSeedToggle,
   onSeedChange,
+  doubleRoundRobin,
+  onDoubleRoundRobinToggle,
 }: SimulationParametersProps) {
   const [showNoiseSettings, setShowNoiseSettings] = useState(false);
   const [showPayoffSettings, setShowPayoffSettings] = useState(false);
@@ -136,6 +140,22 @@ export function SimulationParametersPanel({
             disabled={!seedEnabled}
             placeholder="e.g. 42 or lab-session-1"
             className="w-full sm:w-64"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-3 rounded-md border border-dashed border-muted p-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Double round-robin</p>
+            <p className="text-xs text-muted-foreground">
+              Play each matchup twice so every strategy moves first once.
+            </p>
+          </div>
+          <Switch
+            checked={doubleRoundRobin}
+            onCheckedChange={onDoubleRoundRobinToggle}
+            aria-label="Toggle double round-robin"
           />
         </div>
       </div>

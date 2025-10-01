@@ -44,6 +44,8 @@ type DashboardProps = {
   seedValue: string;
   onSeedToggle: (enabled: boolean) => void;
   onSeedChange: (value: string) => void;
+  doubleRoundRobin: boolean;
+  onDoubleRoundRobinToggle: (enabled: boolean) => void;
 };
 
 function TournamentDashboard({
@@ -61,6 +63,8 @@ function TournamentDashboard({
   seedValue,
   onSeedToggle,
   onSeedChange,
+  doubleRoundRobin,
+  onDoubleRoundRobinToggle,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
@@ -100,6 +104,8 @@ function TournamentDashboard({
           seedValue={seedValue}
           onSeedToggle={onSeedToggle}
           onSeedChange={onSeedChange}
+          doubleRoundRobin={doubleRoundRobin}
+          onDoubleRoundRobinToggle={onDoubleRoundRobinToggle}
         />
 
         <section className="space-y-2">
@@ -200,12 +206,13 @@ function App() {
   const [payoffMatrix, setPayoffMatrix] = useState<PayoffMatrix>(() => ({ ...DEFAULT_PAYOFF_MATRIX }));
   const [seedEnabled, setSeedEnabled] = useState(false);
   const [seedValue, setSeedValue] = useState('');
+  const [doubleRoundRobin, setDoubleRoundRobin] = useState(false);
 
   const runTournament = () => {
     console.clear();
     const errorRate = noiseEnabled ? noisePercent / 100 : 0;
     const seed = seedEnabled && seedValue.trim().length > 0 ? seedValue.trim() : undefined;
-    const outcome = simulateTournament(roundsPerMatch, errorRate, payoffMatrix, seed);
+    const outcome = simulateTournament(roundsPerMatch, errorRate, payoffMatrix, seed, doubleRoundRobin);
     setResults(outcome);
   };
 
@@ -244,6 +251,8 @@ function App() {
             seedValue={seedValue}
             onSeedToggle={setSeedEnabled}
             onSeedChange={setSeedValue}
+            doubleRoundRobin={doubleRoundRobin}
+            onDoubleRoundRobinToggle={setDoubleRoundRobin}
           />
         ) : (
           <LandingScreen onStart={handleEnterLab} isFadingOut={isLandingFading} />
