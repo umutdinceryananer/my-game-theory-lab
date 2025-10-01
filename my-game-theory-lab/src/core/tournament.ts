@@ -5,6 +5,8 @@ import { PrisonersDilemmaGame } from './game';
 export interface TournamentResult {
   name: string;
   totalScore: number;
+  averageScore: number;
+  matchesPlayed: number;
   wins: number;
 }
 
@@ -26,7 +28,13 @@ export class Tournament {
     }
 
     const results: TournamentResult[] =
-      strategies.map((strategy) => ({ name: strategy.name, totalScore: 0, wins: 0 }));
+      strategies.map((strategy) => ({
+        name: strategy.name,
+        totalScore: 0,
+        averageScore: 0,
+        matchesPlayed: 0,
+        wins: 0,
+      }));
 
     // Play all matches
     for (let i = 0; i < strategies.length; i++) {
@@ -43,13 +51,22 @@ export class Tournament {
         results[i].totalScore += match.player1Score;
         results[j].totalScore += match.player2Score;
 
+        results[i].matchesPlayed += 1;
+        results[j].matchesPlayed += 1;
+
         // Count wins
         if (match.player1Score > match.player2Score) results[i].wins++;
         else if (match.player2Score > match.player1Score) results[j].wins++;
       }
     }
 
-    // Sort by total score
+    // Compute averages and sort by total score
+    results.forEach((result) => {
+      if (result.matchesPlayed > 0) {
+        result.averageScore = result.totalScore / result.matchesPlayed;
+      }
+    });
+
     results.sort((a, b) => b.totalScore - a.totalScore);
 
     return results;
@@ -60,15 +77,17 @@ export class Tournament {
    */
   formatResults(results: TournamentResult[]): void {
     console.log('\n=== TOURNAMENT RESULTS ===');
-    console.log('Rank | Strategy          | Score | Wins');
-    console.log('-----|-------------------|-------|-----');
+    console.log('Rank | Strategy          | Score | Avg   | Wins | Matches');
+    console.log('-----|-------------------|-------|-------|------|--------');
 
     results.forEach((result, index) => {
       const rank = (index + 1).toString().padStart(4);
       const name = result.name.padEnd(17);
       const score = result.totalScore.toString().padStart(5);
+      const average = result.averageScore.toFixed(2).padStart(5);
       const wins = result.wins.toString().padStart(4);
-      console.log(`${rank} | ${name} | ${score} | ${wins}`);
+      const matches = result.matchesPlayed.toString().padStart(6);
+      console.log(`${rank} | ${name} | ${score} | ${average} | ${wins} | ${matches}`);
     });
   }
 }
