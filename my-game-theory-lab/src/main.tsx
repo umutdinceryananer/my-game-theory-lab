@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Play, Trophy } from 'lucide-react';
+import { Menu, Play, Trophy, X } from 'lucide-react';
 
 import '@/index.css';
 import { LandingScreen } from '@/components/landing-screen';
@@ -67,6 +67,8 @@ function TournamentDashboard({
   onDoubleRoundRobinToggle,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsVisible(true));
     return () => window.cancelAnimationFrame(id);
@@ -74,40 +76,28 @@ function TournamentDashboard({
 
   const champion = results?.[0];
 
+  const closeSettings = () => setSettingsOpen(false);
+
   return (
     <Card className={cn('transition-opacity duration-500', isVisible ? 'opacity-100' : 'opacity-0')}>
       <CardHeader className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
             <CardTitle>Game Theory Lab</CardTitle>
             <CardDescription>
-              Explore the Iterated Prisoner's Dilemma with pluggable strategies.
+              Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
             </CardDescription>
           </div>
-          <div className="hidden shrink-0 items-center gap-2 rounded-full border border-dashed px-4 py-2 sm:flex">
-            <Play className="h-5 w-5 text-primary" />
-            <span className="text-xs font-semibold uppercase text-muted-foreground">Tournament</span>
+          <div className="flex items-center gap-3">
+            
+            <Button variant="outline" onClick={() => setSettingsOpen(true)} className="flex items-center gap-2">
+              <Menu className="h-4 w-4" />
+              Simulation Settings
+            </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <SimulationParametersPanel
-          rounds={roundsPerMatch}
-          onRoundsChange={onRoundsChange}
-          noiseEnabled={noiseEnabled}
-          onNoiseToggle={onNoiseToggle}
-          noisePercent={noisePercent}
-          onNoisePercentChange={onNoisePercentChange}
-          payoffMatrix={payoffMatrix}
-          onPayoffMatrixChange={onPayoffMatrixChange}
-          seedEnabled={seedEnabled}
-          seedValue={seedValue}
-          onSeedToggle={onSeedToggle}
-          onSeedChange={onSeedChange}
-          doubleRoundRobin={doubleRoundRobin}
-          onDoubleRoundRobinToggle={onDoubleRoundRobinToggle}
-        />
-
         <section className="space-y-2">
           <h2 className="text-sm font-semibold uppercase text-muted-foreground">Included strategies</h2>
           <ul className="grid gap-2 sm:grid-cols-2">
@@ -128,10 +118,7 @@ function TournamentDashboard({
           </ul>
         </section>
 
-        <section className="space-y-2 rounded-lg bg-secondary/20 p-4 text-sm text-muted-foreground">
-          <p>Click the button to simulate a round robin tournament with the configured parameters.</p>
-          <p>The detailed scores and rankings still log to the console, and the table below reflects the latest run.</p>
-        </section>
+        
 
         <section className="space-y-3 rounded-lg border border-dashed border-muted p-4">
           <div className="flex items-center justify-between gap-3">
@@ -192,6 +179,39 @@ function TournamentDashboard({
           Run Tournament
         </Button>
       </CardFooter>
+
+      {settingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60" onClick={closeSettings} />
+          <Card className="relative z-10 w-full max-w-3xl overflow-hidden shadow-lg">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <h2 className="text-lg font-semibold">Simulation Settings</h2>
+              <Button variant="ghost" size="icon" onClick={closeSettings}>
+                <X className="h-5 w-5" />
+                <span className="sr-only">Close</span>
+              </Button>
+            </div>
+            <div className="max-h-[75vh] overflow-y-auto px-6 py-4">
+              <SimulationParametersPanel
+                rounds={roundsPerMatch}
+                onRoundsChange={onRoundsChange}
+                noiseEnabled={noiseEnabled}
+                onNoiseToggle={onNoiseToggle}
+                noisePercent={noisePercent}
+                onNoisePercentChange={onNoisePercentChange}
+                payoffMatrix={payoffMatrix}
+                onPayoffMatrixChange={onPayoffMatrixChange}
+                seedEnabled={seedEnabled}
+                seedValue={seedValue}
+                onSeedToggle={onSeedToggle}
+                onSeedChange={onSeedChange}
+                doubleRoundRobin={doubleRoundRobin}
+                onDoubleRoundRobinToggle={onDoubleRoundRobinToggle}
+              />
+            </div>
+          </Card>
+        </div>
+      )}
     </Card>
   );
 }
@@ -234,7 +254,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-12">
+      <main className="mx-auto flex min-h-screen w-full max-w-4xl lg:max-w-6xl flex-col justify-center px-6 py-12">
         {hasStarted ? (
           <TournamentDashboard
             results={results}
@@ -267,3 +287,4 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
