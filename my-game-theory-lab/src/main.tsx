@@ -4,6 +4,7 @@ import { Play, Trophy } from 'lucide-react';
 
 import '@/index.css';
 import { LandingScreen } from '@/components/landing-screen';
+import { SimulationParametersPanel } from '@/components/panels/simulation-parameters';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -33,6 +33,10 @@ type DashboardProps = {
   onRunTournament: () => void;
   roundsPerMatch: number;
   onRoundsChange: (value: number) => void;
+  noiseEnabled: boolean;
+  onNoiseToggle: (enabled: boolean) => void;
+  noisePercent: number;
+  onNoisePercentChange: (value: number) => void;
 };
 
 function TournamentDashboard({
@@ -40,6 +44,10 @@ function TournamentDashboard({
   onRunTournament,
   roundsPerMatch,
   onRoundsChange,
+  noiseEnabled,
+  onNoiseToggle,
+  noisePercent,
+  onNoisePercentChange,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
@@ -48,17 +56,6 @@ function TournamentDashboard({
   }, []);
 
   const champion = results?.[0];
-
-  const handleRoundsInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const next = Number(event.target.value);
-    if (Number.isNaN(next)) {
-      onRoundsChange(1);
-      return;
-    }
-
-    const clamped = Math.min(1000, Math.max(1, Math.floor(next)));
-    onRoundsChange(clamped);
-  };
 
   return (
     <Card className={cn('transition-opacity duration-500', isVisible ? 'opacity-100' : 'opacity-0')}>
@@ -77,32 +74,14 @@ function TournamentDashboard({
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <section className="space-y-3 rounded-lg border border-dashed border-muted p-4">
-          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold uppercase text-muted-foreground">Simulation parameters</h2>
-              <p className="text-xs text-muted-foreground">Adjust match length before running the tournament.</p>
-            </div>
-            <span className="text-xs font-medium text-muted-foreground">1 - 1000 rounds</span>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <label htmlFor="rounds" className="text-sm font-medium text-muted-foreground">
-              Rounds per match
-            </label>
-            <Input
-              id="rounds"
-              type="number"
-              min={1}
-              max={1000}
-              step={1}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={roundsPerMatch}
-              onChange={handleRoundsInput}
-              className="w-full sm:w-32"
-            />
-          </div>
-        </section>
+        <SimulationParametersPanel
+          rounds={roundsPerMatch}
+          onRoundsChange={onRoundsChange}
+          noiseEnabled={noiseEnabled}
+          onNoiseToggle={onNoiseToggle}
+          noisePercent={noisePercent}
+          onNoisePercentChange={onNoisePercentChange}
+        />
 
         <section className="space-y-2">
           <h2 className="text-sm font-semibold uppercase text-muted-foreground">Included strategies</h2>
@@ -125,7 +104,7 @@ function TournamentDashboard({
         </section>
 
         <section className="space-y-2 rounded-lg bg-secondary/20 p-4 text-sm text-muted-foreground">
-          <p>Click the button to simulate a round robin tournament with the configured number of rounds per match.</p>
+          <p>Click the button to simulate a round robin tournament with the configured parameters.</p>
           <p>The detailed scores and rankings still log to the console, and the table below reflects the latest run.</p>
         </section>
 
@@ -191,10 +170,13 @@ function App() {
   const [isLandingFading, setIsLandingFading] = useState(false);
   const [results, setResults] = useState<TournamentResult[] | null>(null);
   const [roundsPerMatch, setRoundsPerMatch] = useState(100);
+  const [noiseEnabled, setNoiseEnabled] = useState(false);
+  const [noisePercent, setNoisePercent] = useState(10);
 
   const runTournament = () => {
     console.clear();
-    const outcome = simulateTournament(roundsPerMatch);
+    const errorRate = noiseEnabled ? noisePercent / 100 : 0;
+    const outcome = simulateTournament(roundsPerMatch, errorRate);
     setResults(outcome);
   };
 
@@ -223,6 +205,10 @@ function App() {
             onRunTournament={runTournament}
             roundsPerMatch={roundsPerMatch}
             onRoundsChange={setRoundsPerMatch}
+            noiseEnabled={noiseEnabled}
+            onNoiseToggle={setNoiseEnabled}
+            noisePercent={noisePercent}
+            onNoisePercentChange={setNoisePercent}
           />
         ) : (
           <LandingScreen onStart={handleEnterLab} isFadingOut={isLandingFading} />

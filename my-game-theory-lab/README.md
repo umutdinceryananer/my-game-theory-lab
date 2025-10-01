@@ -1,34 +1,48 @@
 # Game Theory Lab
 
-Interactive sandbox for running Iterated Prisoner's Dilemma tournaments with React, Vite, TypeScript, Tailwind CSS, and shadcn/ui.
+Interactive React/Vite sandbox for iterated Prisoner's Dilemma tournaments. Strategies face off in a configurable simulation engine, and the monochrome UI is styled with Tailwind CSS + shadcn/ui components.
 
 ## Getting Started
 
 1. Install dependencies:
-   ```bash
+   `bash
    npm install
-   ```
+   `
 2. Launch the dev server:
-   ```bash
+   `bash
    npm run dev
-   ```
+   `
 3. Open the printed URL in your browser and keep DevTools (F12) open to watch the tournament logs.
 
-## What You Get
+## Features
 
-- **Tournament engine** – `src/core` implements the Prisoner's Dilemma match logic and a round-robin tournament runner.
-- **Strategy catalog** – `src/strategies` ships Always Cooperate, Always Defect, Tit-for-Tat, and Random baselines to extend.
-- **Monochrome UI** – `src/main.tsx` renders shadcn cards, badges, tables, and buttons with neutral Tailwind tokens plus a live standings table.
+- **Tournament engine** ï¿½ src/core implements the match logic, supports custom round counts, and can inject noise that flips moves to emulate miscommunication. The round-robin driver aggregates scores and ranks strategies.
+- **Strategy catalog** ï¿½ src/strategies ships Always Cooperate, Always Defect, Tit-for-Tat, and Random as baselines. Add new behaviours by exporting additional strategies and including them in defaultStrategies.
+- **Onboarding flow** ï¿½ src/components/landing-screen.tsx greets users with a fade transition before dropping them into the dashboard.
+- **Simulation control panel** ï¿½ src/components/panels/simulation-parameters.tsx exposes rounds-per-match, a noise toggle, and advanced slider/number inputs for fine-tuning error rates.
+- **Monochrome shadcn shell** ï¿½ Cards, badges, tables, buttons, switches, and inputs live in src/components/ui, styled via tokens defined in src/index.css and 	ailwind.config.ts.
+
+## Simulation Controls
+
+- **Rounds per match** ï¿½ Choose any integer from 1ï¿½1000 to test short- or long-horizon behaviour.
+- **Noise toggle** ï¿½ Quickly enable or disable move flips. When enabled, use the advanced controls to set the 0ï¿½100% probability that each move is inverted.
+- Results stream to the browser console and populate the standings table in real time.
 
 ## Useful Scripts
 
-- `npm run dev` – start Vite in development mode.
-- `npm run build` – type-check and build the production bundle.
-- `npm run preview` – locally preview the production build.
-- `npm run lint` – run ESLint with the configured TypeScript rules.
+- 
+pm run dev: start Vite in development mode.
+- 
+pm run build: type-check and build the production bundle.
+- 
+pm run preview: locally preview the production build.
+- 
+pm run lint: run ESLint with the configured TypeScript rules.
 
-## Customizing shadcn Components
+## Customization Tips
 
-- Tailwind configuration lives in `tailwind.config.ts`; global tokens and base utilities reside in `src/index.css`.
-- Shared helpers such as `cn` and base UI primitives (Button, Card, Badge, Table) sit under `src/lib` and `src/components/ui`.
-- Add new shadcn components by defining them in `src/components/ui` and wiring Tailwind classes that reference the design tokens.
+- Update the design tokens in src/index.css for a different colour palette.
+- Re-export new UI atoms from src/components/ui to keep imports tidy (@/components/ui/...).
+- Extend src/strategies/index.ts with custom strategies and rerun the tournament to see how they fare.
+
+Happy experimenting!

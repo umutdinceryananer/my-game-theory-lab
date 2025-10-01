@@ -14,7 +14,11 @@ export class Tournament {
   /**
    * Run a round-robin tournament
    */
-  run(strategies: Strategy[], roundsPerMatch: number = 100): TournamentResult[] {
+  run(
+    strategies: Strategy[],
+    roundsPerMatch: number = 100,
+    errorRate: number = 0,
+  ): TournamentResult[] {
     if (strategies.length < 2) {
       throw new Error('Need at least 2 strategies');
     }
@@ -25,7 +29,7 @@ export class Tournament {
     // Play all matches
     for (let i = 0; i < strategies.length; i++) {
       for (let j = i + 1; j < strategies.length; j++) {
-        const match = this.game.playMatch(strategies[i], strategies[j], roundsPerMatch);
+        const match = this.game.playMatch(strategies[i], strategies[j], roundsPerMatch, errorRate);
 
         // Update scores
         results[i].totalScore += match.player1Score;
