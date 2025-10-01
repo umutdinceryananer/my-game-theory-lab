@@ -1,5 +1,7 @@
 import type { Move, Strategy, PayoffMatrix } from './types';
 import { DEFAULT_PAYOFF_MATRIX } from './types';
+import type { RandomSource } from './random';
+import { createRandomSource } from './random';
 
 // Simple game - just the essentials
 export class PrisonersDilemmaGame {
@@ -32,6 +34,7 @@ export class PrisonersDilemmaGame {
     rounds: number = 100,
     errorRate: number = 0,
     payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
+    randomSource: RandomSource = createRandomSource(),
   ) {
     let score1 = 0;
     let score2 = 0;
@@ -45,20 +48,22 @@ export class PrisonersDilemmaGame {
         opponentMoves: history2,
         scores: [],
         opponentScores: [],
+        random: randomSource,
       };
       const gameHistory2 = {
         playerMoves: history2,
         opponentMoves: history1,
         scores: [],
         opponentScores: [],
+        random: randomSource,
       };
 
       let move1 = strategy1.play(gameHistory1, round);
       let move2 = strategy2.play(gameHistory2, round);
 
       if (errorRate > 0) {
-        if (Math.random() < errorRate) move1 = PrisonersDilemmaGame.invertMove(move1);
-        if (Math.random() < errorRate) move2 = PrisonersDilemmaGame.invertMove(move2);
+        if (randomSource() < errorRate) move1 = PrisonersDilemmaGame.invertMove(move1);
+        if (randomSource() < errorRate) move2 = PrisonersDilemmaGame.invertMove(move2);
       }
 
       const [points1, points2] = PrisonersDilemmaGame.getPayoffs(payoffMatrix, move1, move2);

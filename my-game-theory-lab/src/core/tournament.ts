@@ -1,6 +1,7 @@
 import type { Strategy, PayoffMatrix } from './types';
 import { DEFAULT_PAYOFF_MATRIX } from './types';
 import { PrisonersDilemmaGame } from './game';
+import { createRandomSource } from './random';
 
 export interface TournamentResult {
   name: string;
@@ -22,10 +23,13 @@ export class Tournament {
     roundsPerMatch: number = 100,
     errorRate: number = 0,
     payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
+    seed?: number | string,
   ): TournamentResult[] {
     if (strategies.length < 2) {
       throw new Error('Need at least 2 strategies');
     }
+
+    const seededRandom = seed !== undefined ? createRandomSource(seed) : undefined;
 
     const results: TournamentResult[] =
       strategies.map((strategy) => ({
@@ -39,12 +43,14 @@ export class Tournament {
     // Play all matches
     for (let i = 0; i < strategies.length; i++) {
       for (let j = i + 1; j < strategies.length; j++) {
+        const randomSource = seededRandom ?? createRandomSource();
         const match = this.game.playMatch(
           strategies[i],
           strategies[j],
           roundsPerMatch,
           errorRate,
           payoffMatrix,
+          randomSource,
         );
 
         // Update scores

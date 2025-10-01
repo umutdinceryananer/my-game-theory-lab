@@ -6,6 +6,7 @@ export interface GameHistory {
   opponentMoves: Move[];
   scores: number[];
   opponentScores: number[];
+  random: () => number;
 }
 
 export interface Strategy {
