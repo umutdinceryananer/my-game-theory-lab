@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { Play, Trophy } from 'lucide-react';
 
 import '@/index.css';
+import { LandingScreen } from '@/components/landing-screen';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -21,18 +23,24 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { LandingScreen } from '@/components/landing-screen';
 import { cn } from '@/lib/utils';
-import { defaultStrategies } from '@/strategies';
 import type { TournamentResult } from '@/core/tournament';
 import { simulateTournament } from '@/test-game';
+import { defaultStrategies } from '@/strategies';
 
 type DashboardProps = {
   results: TournamentResult[] | null;
   onRunTournament: () => void;
+  roundsPerMatch: number;
+  onRoundsChange: (value: number) => void;
 };
 
-function TournamentDashboard({ results, onRunTournament }: DashboardProps) {
+function TournamentDashboard({
+  results,
+  onRunTournament,
+  roundsPerMatch,
+  onRoundsChange,
+}: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsVisible(true));
@@ -40,6 +48,17 @@ function TournamentDashboard({ results, onRunTournament }: DashboardProps) {
   }, []);
 
   const champion = results?.[0];
+
+  const handleRoundsInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const next = Number(event.target.value);
+    if (Number.isNaN(next)) {
+      onRoundsChange(1);
+      return;
+    }
+
+    const clamped = Math.min(1000, Math.max(1, Math.floor(next)));
+    onRoundsChange(clamped);
+  };
 
   return (
     <Card className={cn('transition-opacity duration-500', isVisible ? 'opacity-100' : 'opacity-0')}>
@@ -58,6 +77,33 @@ function TournamentDashboard({ results, onRunTournament }: DashboardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        <section className="space-y-3 rounded-lg border border-dashed border-muted p-4">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase text-muted-foreground">Simulation parameters</h2>
+              <p className="text-xs text-muted-foreground">Adjust match length before running the tournament.</p>
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">1 - 1000 rounds</span>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <label htmlFor="rounds" className="text-sm font-medium text-muted-foreground">
+              Rounds per match
+            </label>
+            <Input
+              id="rounds"
+              type="number"
+              min={1}
+              max={1000}
+              step={1}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={roundsPerMatch}
+              onChange={handleRoundsInput}
+              className="w-full sm:w-32"
+            />
+          </div>
+        </section>
+
         <section className="space-y-2">
           <h2 className="text-sm font-semibold uppercase text-muted-foreground">Included strategies</h2>
           <ul className="grid gap-2 sm:grid-cols-2">
@@ -79,7 +125,7 @@ function TournamentDashboard({ results, onRunTournament }: DashboardProps) {
         </section>
 
         <section className="space-y-2 rounded-lg bg-secondary/20 p-4 text-sm text-muted-foreground">
-          <p>Click the button to simulate a 100-round round robin tournament.</p>
+          <p>Click the button to simulate a round robin tournament with the configured number of rounds per match.</p>
           <p>The detailed scores and rankings still log to the console, and the table below reflects the latest run.</p>
         </section>
 
@@ -144,10 +190,11 @@ function App() {
   const [hasStarted, setHasStarted] = useState(false);
   const [isLandingFading, setIsLandingFading] = useState(false);
   const [results, setResults] = useState<TournamentResult[] | null>(null);
+  const [roundsPerMatch, setRoundsPerMatch] = useState(100);
 
   const runTournament = () => {
     console.clear();
-    const outcome = simulateTournament();
+    const outcome = simulateTournament(roundsPerMatch);
     setResults(outcome);
   };
 
@@ -171,7 +218,12 @@ function App() {
     <div className="min-h-screen bg-background text-foreground">
       <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center px-6 py-12">
         {hasStarted ? (
-          <TournamentDashboard results={results} onRunTournament={runTournament} />
+          <TournamentDashboard
+            results={results}
+            onRunTournament={runTournament}
+            roundsPerMatch={roundsPerMatch}
+            onRoundsChange={setRoundsPerMatch}
+          />
         ) : (
           <LandingScreen onStart={handleEnterLab} isFadingOut={isLandingFading} />
         )}
