@@ -9,19 +9,8 @@ export function simulateTournament(
   seed?: number | string,
   doubleRoundRobin: boolean = false,
 ): TournamentResult[] {
-  console.log("=== PRISONER'S DILEMMA TOURNAMENT ===");
-  console.log(`Rounds per match: ${rounds}`);
-  console.log(`Noise (error rate): ${(errorRate * 100).toFixed(1)}%`);
-  console.log(
-    `Payoff matrix (T, R, P, S): ${payoffMatrix.temptation}, ${payoffMatrix.reward}, ${payoffMatrix.punishment}, ${payoffMatrix.sucker}`,
-  );
-  if (seed !== undefined) {
-    console.log(`Seed: ${seed}`);
-  }
-  console.log(`Double round-robin: ${doubleRoundRobin ? 'enabled' : 'disabled'}`);
-
   const tournament = new Tournament();
-  const results = tournament.run(
+  return tournament.run(
     defaultStrategies,
     rounds,
     errorRate,
@@ -29,7 +18,4 @@ export function simulateTournament(
     seed,
     doubleRoundRobin,
   );
-  tournament.formatResults(results);
-
-  return results;
 }

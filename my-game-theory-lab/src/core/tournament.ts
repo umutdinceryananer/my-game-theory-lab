@@ -99,12 +99,14 @@ export class Tournament {
   }
 
   /**
-   * Format results for console
+   * Format results into displayable strings
    */
-  formatResults(results: TournamentResult[]): void {
-    console.log('\n=== TOURNAMENT RESULTS ===');
-    console.log('Rank | Strategy          | Score | Avg   | Wins | Matches');
-    console.log('-----|-------------------|-------|-------|------|--------');
+  formatResults(results: TournamentResult[]): string[] {
+    const lines: string[] = [
+      '=== TOURNAMENT RESULTS ===',
+      'Rank | Strategy          | Score | Avg   | Wins | Matches',
+      '-----|-------------------|-------|-------|------|--------',
+    ];
 
     results.forEach((result, index) => {
       const rank = (index + 1).toString().padStart(4);
@@ -113,7 +115,9 @@ export class Tournament {
       const average = result.averageScore.toFixed(2).padStart(5);
       const wins = result.wins.toString().padStart(4);
       const matches = result.matchesPlayed.toString().padStart(6);
-      console.log(`${rank} | ${name} | ${score} | ${average} | ${wins} | ${matches}`);
+      lines.push(`${rank} | ${name} | ${score} | ${average} | ${wins} | ${matches}`);
     });
+
+    return lines;
   }
 }

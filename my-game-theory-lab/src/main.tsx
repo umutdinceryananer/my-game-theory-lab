@@ -83,7 +83,7 @@ function TournamentDashboard({
       <CardHeader className="space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <CardTitle>Game Theory Lab</CardTitle>
+            <CardTitle>Umut's Game Theory Lab</CardTitle>
             <CardDescription>
               Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
             </CardDescription>
@@ -170,20 +170,16 @@ function TournamentDashboard({
           )}
         </section>
       </CardContent>
-      <CardFooter className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          Pro tip: open DevTools (F12) before running to follow along with the console log output.
-        </p>
+      <CardFooter className="flex justify-end">
         <Button size="lg" onClick={onRunTournament} className="w-full sm:w-auto">
           <Play className="mr-2 h-4 w-4" />
           Run Tournament
         </Button>
       </CardFooter>
 
-      {settingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60" onClick={closeSettings} />
-          <Card className="relative z-10 w-full max-w-3xl overflow-hidden shadow-lg">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200" aria-hidden={!settingsOpen} style={{ pointerEvents: settingsOpen ? "auto" : "none", opacity: settingsOpen ? 1 : 0 }}>
+          <div className="absolute inset-0 bg-black/60 transition-opacity duration-200" onClick={closeSettings} style={{ opacity: settingsOpen ? 1 : 0 }} />
+          <Card className="relative z-10 w-full max-w-3xl overflow-hidden shadow-lg transition-transform duration-200" style={{ transform: settingsOpen ? "scale(1)" : "scale(0.97)" }}>
             <div className="flex items-center justify-between border-b px-6 py-4">
               <h2 className="text-lg font-semibold">Simulation Settings</h2>
               <Button variant="ghost" size="icon" onClick={closeSettings}>
@@ -211,7 +207,6 @@ function TournamentDashboard({
             </div>
           </Card>
         </div>
-      )}
     </Card>
   );
 }
@@ -287,4 +282,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+
 
