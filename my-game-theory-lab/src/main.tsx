@@ -40,6 +40,10 @@ type DashboardProps = {
   onNoisePercentChange: (value: number) => void;
   payoffMatrix: PayoffMatrix;
   onPayoffMatrixChange: (matrix: PayoffMatrix) => void;
+  seedEnabled: boolean;
+  seedValue: string;
+  onSeedToggle: (enabled: boolean) => void;
+  onSeedChange: (value: string) => void;
 };
 
 function TournamentDashboard({
@@ -53,6 +57,10 @@ function TournamentDashboard({
   onNoisePercentChange,
   payoffMatrix,
   onPayoffMatrixChange,
+  seedEnabled,
+  seedValue,
+  onSeedToggle,
+  onSeedChange,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   useEffect(() => {
@@ -88,6 +96,10 @@ function TournamentDashboard({
           onNoisePercentChange={onNoisePercentChange}
           payoffMatrix={payoffMatrix}
           onPayoffMatrixChange={onPayoffMatrixChange}
+          seedEnabled={seedEnabled}
+          seedValue={seedValue}
+          onSeedToggle={onSeedToggle}
+          onSeedChange={onSeedChange}
         />
 
         <section className="space-y-2">
@@ -186,11 +198,14 @@ function App() {
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [noisePercent, setNoisePercent] = useState(10);
   const [payoffMatrix, setPayoffMatrix] = useState<PayoffMatrix>(() => ({ ...DEFAULT_PAYOFF_MATRIX }));
+  const [seedEnabled, setSeedEnabled] = useState(false);
+  const [seedValue, setSeedValue] = useState('');
 
   const runTournament = () => {
     console.clear();
     const errorRate = noiseEnabled ? noisePercent / 100 : 0;
-    const outcome = simulateTournament(roundsPerMatch, errorRate, payoffMatrix);
+    const seed = seedEnabled && seedValue.trim().length > 0 ? seedValue.trim() : undefined;
+    const outcome = simulateTournament(roundsPerMatch, errorRate, payoffMatrix, seed);
     setResults(outcome);
   };
 
@@ -225,6 +240,10 @@ function App() {
             onNoisePercentChange={setNoisePercent}
             payoffMatrix={payoffMatrix}
             onPayoffMatrixChange={setPayoffMatrix}
+            seedEnabled={seedEnabled}
+            seedValue={seedValue}
+            onSeedToggle={setSeedEnabled}
+            onSeedChange={setSeedValue}
           />
         ) : (
           <LandingScreen onStart={handleEnterLab} isFadingOut={isLandingFading} />

@@ -20,6 +20,10 @@ export type SimulationParametersProps = {
   onNoisePercentChange: (value: number) => void;
   payoffMatrix: PayoffMatrix;
   onPayoffMatrixChange: (matrix: PayoffMatrix) => void;
+  seedEnabled: boolean;
+  seedValue: string;
+  onSeedToggle: (enabled: boolean) => void;
+  onSeedChange: (value: string) => void;
 };
 
 export function SimulationParametersPanel({
@@ -31,6 +35,10 @@ export function SimulationParametersPanel({
   onNoisePercentChange,
   payoffMatrix,
   onPayoffMatrixChange,
+  seedEnabled,
+  seedValue,
+  onSeedToggle,
+  onSeedChange,
 }: SimulationParametersProps) {
   const [showNoiseSettings, setShowNoiseSettings] = useState(false);
   const [showPayoffSettings, setShowPayoffSettings] = useState(false);
@@ -72,13 +80,17 @@ export function SimulationParametersPanel({
     onPayoffMatrixChange(next);
   };
 
+  const handleSeedInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    onSeedChange(event.target.value);
+  };
+
   return (
     <section className="space-y-3 rounded-lg border border-dashed border-muted p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-sm font-semibold uppercase text-muted-foreground">Simulation parameters</h2>
           <p className="text-xs text-muted-foreground">
-            Tune match length, noise, and payoff matrix before running the tournament.
+            Tune match length, noise, randomness and payoff matrix before running the tournament.
           </p>
         </div>
         <Badge variant="outline" className="uppercase">Lab setup</Badge>
@@ -100,6 +112,32 @@ export function SimulationParametersPanel({
           onChange={handleRoundsInput}
           className="w-full sm:w-32"
         />
+      </div>
+
+      <div className="space-y-3 rounded-md border border-dashed border-muted p-3">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">Deterministic seed</p>
+            <p className="text-xs text-muted-foreground">
+              Use a fixed seed to reproduce random strategy behavior and noise flips.
+            </p>
+          </div>
+          <Switch checked={seedEnabled} onCheckedChange={onSeedToggle} aria-label="Toggle seed" />
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <label htmlFor="seed" className="text-xs font-medium text-muted-foreground">
+            Seed value (number or text)
+          </label>
+          <Input
+            id="seed"
+            type="text"
+            value={seedValue}
+            onChange={handleSeedInput}
+            disabled={!seedEnabled}
+            placeholder="e.g. 42 or lab-session-1"
+            className="w-full sm:w-64"
+          />
+        </div>
       </div>
 
       <div className="space-y-3 rounded-md border border-dashed border-muted p-3">
