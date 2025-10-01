@@ -69,7 +69,7 @@ function TournamentDashboard({
           <div>
             <CardTitle>Game Theory Lab</CardTitle>
             <CardDescription>
-              Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
+              Explore the Iterated Prisoner's Dilemma with pluggable strategies.
             </CardDescription>
           </div>
           <div className="hidden shrink-0 items-center gap-2 rounded-full border border-dashed px-4 py-2 sm:flex">
@@ -119,7 +119,9 @@ function TournamentDashboard({
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold uppercase text-muted-foreground">Latest standings</h2>
-              <p className="text-xs text-muted-foreground">Sorted by cumulative score across all matches.</p>
+              <p className="text-xs text-muted-foreground">
+                Sorted by cumulative score; average shows match-level performance.
+              </p>
             </div>
             {champion ? (
               <Badge variant="secondary" className="flex items-center gap-1">
@@ -138,7 +140,8 @@ function TournamentDashboard({
                   <TableHead className="w-28">Rank</TableHead>
                   <TableHead>Strategy</TableHead>
                   <TableHead className="w-24 text-right">Score</TableHead>
-                  <TableHead className="w-24 text-right">Wins</TableHead>
+                  <TableHead className="w-24 text-right">Average</TableHead>
+                  <TableHead className="w-20 text-right">Wins</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -149,6 +152,9 @@ function TournamentDashboard({
                       {result.name}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm">{result.totalScore}</TableCell>
+                    <TableCell className="text-right font-mono text-sm">
+                      {result.averageScore.toFixed(2)}
+                    </TableCell>
                     <TableCell className="text-right font-mono text-sm">{result.wins}</TableCell>
                   </TableRow>
                 ))}
