@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Check, Menu, Play, Trophy, X } from 'lucide-react';
+import { Menu, Play, Trophy, X } from 'lucide-react';
 
 import '@/index.css';
 import { LandingScreen } from '@/components/landing-screen';
@@ -162,7 +162,7 @@ function TournamentDashboard({
         type='button'
         onClick={handleToggle}
         className={cn(
-          'flex h-full w-full items-start gap-3 rounded-md border p-3 text-left text-sm transition-opacity duration-200',
+          'flex w-full items-center gap-3 rounded-md border p-2 text-left text-sm transition-opacity duration-200',
           visible ? 'opacity-100' : 'opacity-0',
           isSelected
             ? 'border-primary bg-secondary/30 text-foreground'
@@ -173,11 +173,11 @@ function TournamentDashboard({
         <span className='inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground'>
           {strategy.name.slice(0, 2).toUpperCase()}
         </span>
-        <div className='flex flex-1 items-start justify-between gap-3'>
-          <p className='font-medium'>{strategy.name}</p>
+        <div className='flex flex-1 items-center justify-between gap-3'>
+          <p className='font-medium leading-none'>{strategy.name}</p>
           <div className='flex items-center gap-1'>
             <StrategyInfoBadge strategy={strategy} />
-            {isSelected && <Check className='h-4 w-4 text-primary' />}
+            
           </div>
         </div>
       </button>
@@ -255,7 +255,7 @@ function TournamentDashboard({
               ) : filteredSelectedStrategies.length === 0 ? (
                 <p className='text-sm text-muted-foreground'>No selected strategies match your search.</p>
               ) : (
-                <ul className='grid gap-2'>
+                <ul className='grid max-h-[18rem] gap-2 overflow-y-auto sm:grid-cols-2 scrollbar-hidden scroll-gradient'>
                   {filteredSelectedStrategies.map((strategy) => (
                     <li key={strategy.name}><StrategyCardItem strategy={strategy} isSelected={true} /></li>
                   ))}
@@ -280,7 +280,7 @@ function TournamentDashboard({
                       : 'No additional strategies available.'}
                 </p>
               ) : (
-                <ul className='grid gap-2'>
+                <ul className='grid max-h-[18rem] gap-2 overflow-y-auto sm:grid-cols-2 scrollbar-hidden scroll-gradient'>
                   {filteredAvailableStrategies.map((strategy) => (
                     <li key={strategy.name}><StrategyCardItem strategy={strategy} isSelected={false} /></li>
                   ))}
@@ -507,6 +507,15 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+
+
+
+
+
+
+
+
 
 
 

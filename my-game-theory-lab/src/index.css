@@ -56,3 +56,12 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
