@@ -1,6 +1,6 @@
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Menu, Play, Trophy, X } from 'lucide-react';
+import { Check, Menu, Play, Trophy, X } from 'lucide-react';
 
 import '@/index.css';
 import { LandingScreen } from '@/components/landing-screen';
@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
 import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix } from '@/core/types';
 import { cn } from '@/lib/utils';
 import type { TournamentResult } from '@/core/tournament';
@@ -46,6 +47,11 @@ type DashboardProps = {
   onSeedChange: (value: string) => void;
   doubleRoundRobin: boolean;
   onDoubleRoundRobinToggle: (enabled: boolean) => void;
+  strategySearch: string;
+  onStrategySearch: (value: string) => void;
+  selectedStrategyNames: string[];
+  onToggleStrategy: (name: string) => void;
+  activeStrategyCount: number;
 };
 
 function TournamentDashboard({
@@ -65,6 +71,11 @@ function TournamentDashboard({
   onSeedChange,
   doubleRoundRobin,
   onDoubleRoundRobinToggle,
+  strategySearch,
+  onStrategySearch,
+  selectedStrategyNames,
+  onToggleStrategy,
+  activeStrategyCount,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -76,65 +87,104 @@ function TournamentDashboard({
 
   const champion = results?.[0];
 
+  const filteredStrategies = useMemo(() => {
+    const query = strategySearch.trim().toLowerCase();
+    if (!query) return defaultStrategies;
+    return defaultStrategies.filter((strategy) =>
+      strategy.name.toLowerCase().includes(query) ||
+      strategy.description.toLowerCase().includes(query),
+    );
+  }, [strategySearch]);
+
   const closeSettings = () => setSettingsOpen(false);
 
   return (
     <Card className={cn('transition-opacity duration-500', isVisible ? 'opacity-100' : 'opacity-0')}>
-      <CardHeader className="space-y-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <CardTitle>Umut's Game Theory Lab</CardTitle>
+      <CardHeader className='space-y-4'>
+        <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+          <div className='space-y-2'>
+            <CardTitle>Game Theory Lab</CardTitle>
             <CardDescription>
               Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
             </CardDescription>
           </div>
-          <div className="flex items-center gap-3">
-            
-            <Button variant="outline" onClick={() => setSettingsOpen(true)} className="flex items-center gap-2">
-              <Menu className="h-4 w-4" />
+          <div className='flex items-center gap-3'>
+            <Button variant='outline' onClick={() => setSettingsOpen(true)} className='flex items-center gap-2'>
+              <Menu className='h-4 w-4' />
               Simulation Settings
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold uppercase text-muted-foreground">Included strategies</h2>
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {defaultStrategies.map((strategy) => (
-              <li
-                key={strategy.name}
-                className="flex items-center gap-3 rounded-md border border-dashed border-muted p-3 text-sm hover:bg-muted/40"
-              >
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
-                  {strategy.name.slice(0, 2).toUpperCase()}
-                </span>
-                <div>
-                  <p className="font-medium text-foreground">{strategy.name}</p>
-                  <p className="text-xs text-muted-foreground">{strategy.description}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+      <CardContent className='space-y-6'>
+        <section className='space-y-4'>
+          <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+            <div>
+              <h2 className='text-sm font-semibold uppercase text-muted-foreground'>Included strategies</h2>
+              <p className='text-xs text-muted-foreground'>Select at least two strategies to run a tournament.</p>
+            </div>
+            <Input
+              value={strategySearch}
+              onChange={(event) => onStrategySearch(event.target.value)}
+              placeholder='Search strategies...'
+              className='sm:w-64'
+              aria-label='Search strategies'
+            />
+          </div>
+
+          <div className='flex items-center justify-between text-xs text-muted-foreground'>
+            <span>Selected {selectedStrategyNames.length} / {defaultStrategies.length}</span>
+            <span>{filteredStrategies.length} shown</span>
+          </div>
+
+          {filteredStrategies.length === 0 ? (
+            <p className='text-sm text-muted-foreground'>No strategies match your search.</p>
+          ) : (
+            <ul className='grid gap-2 sm:grid-cols-2'>
+              {filteredStrategies.map((strategy) => {
+                const isSelected = selectedStrategyNames.includes(strategy.name);
+                return (
+                  <li key={strategy.name}>
+                    <button
+                      type='button'
+                      onClick={() => onToggleStrategy(strategy.name)}
+                      className={cn(
+                        'flex h-full w-full items-start gap-3 rounded-md border p-3 text-left text-sm transition',
+                        isSelected
+                          ? 'border-primary bg-secondary/30 text-foreground'
+                          : 'border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground',
+                      )}
+                      aria-pressed={isSelected}
+                    >
+                      <span className='inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground'>
+                        {strategy.name.slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className='flex-1 space-y-1'>
+                        <p className='font-medium'>{strategy.name}</p>
+                        <p className='text-xs text-muted-foreground'>{strategy.description}</p>
+                      </div>
+                      {isSelected && <Check className='h-4 w-4 text-primary' />}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </section>
 
-        
-
-        <section className="space-y-3 rounded-lg border border-dashed border-muted p-4">
-          <div className="flex items-center justify-between gap-3">
+        <section className='space-y-3 rounded-lg border border-dashed border-muted p-4'>
+          <div className='flex items-center justify-between gap-3'>
             <div>
-              <h2 className="text-sm font-semibold uppercase text-muted-foreground">Latest standings</h2>
-              <p className="text-xs text-muted-foreground">
-                Sorted by cumulative score; average shows match-level performance.
-              </p>
+              <h2 className='text-sm font-semibold uppercase text-muted-foreground'>Latest standings</h2>
+              <p className='text-xs text-muted-foreground'>Sorted by cumulative score; average shows match-level performance.</p>
             </div>
             {champion ? (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Trophy className="h-3.5 w-3.5" />
+              <Badge variant='secondary' className='flex items-center gap-1'>
+                <Trophy className='h-3.5 w-3.5' />
                 {champion.name}
               </Badge>
             ) : (
-              <Badge variant="outline">Run to populate</Badge>
+              <Badge variant='outline'>Run to populate</Badge>
             )}
           </div>
 
@@ -142,71 +192,82 @@ function TournamentDashboard({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-28">Rank</TableHead>
+                  <TableHead className='w-28'>Rank</TableHead>
                   <TableHead>Strategy</TableHead>
-                  <TableHead className="w-24 text-right">Score</TableHead>
-                  <TableHead className="w-24 text-right">Average</TableHead>
-                  <TableHead className="w-20 text-right">Wins</TableHead>
+                  <TableHead className='w-24 text-right'>Score</TableHead>
+                  <TableHead className='w-24 text-right'>Average</TableHead>
+                  <TableHead className='w-20 text-right'>Wins</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {results.map((result, index) => (
                   <TableRow key={result.name} data-state={index === 0 ? 'selected' : undefined}>
-                    <TableCell className="font-medium">#{index + 1}</TableCell>
+                    <TableCell className='font-medium'>#{index + 1}</TableCell>
                     <TableCell className={cn('text-sm', index === 0 && 'font-semibold text-foreground')}>
                       {result.name}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">{result.totalScore}</TableCell>
-                    <TableCell className="text-right font-mono text-sm">
+                    <TableCell className='text-right font-mono text-sm'>{result.totalScore}</TableCell>
+                    <TableCell className='text-right font-mono text-sm'>
                       {result.averageScore.toFixed(2)}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm">{result.wins}</TableCell>
+                    <TableCell className='text-right font-mono text-sm'>{result.wins}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           ) : (
-            <p className="text-sm text-muted-foreground">Run the tournament to populate the standings table.</p>
+            <p className='text-sm text-muted-foreground'>Run the tournament to populate the standings table.</p>
           )}
         </section>
       </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button size="lg" onClick={onRunTournament} className="w-full sm:w-auto">
-          <Play className="mr-2 h-4 w-4" />
+      <CardFooter className='flex justify-end'>
+        <Button size='lg' onClick={onRunTournament} className='w-full sm:w-auto' disabled={activeStrategyCount < 2}>
+          <Play className='mr-2 h-4 w-4' />
           Run Tournament
         </Button>
       </CardFooter>
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200" aria-hidden={!settingsOpen} style={{ pointerEvents: settingsOpen ? "auto" : "none", opacity: settingsOpen ? 1 : 0 }}>
-          <div className="absolute inset-0 bg-black/60 transition-opacity duration-200" onClick={closeSettings} style={{ opacity: settingsOpen ? 1 : 0 }} />
-          <Card className="relative z-10 w-full max-w-3xl overflow-hidden shadow-lg transition-transform duration-200" style={{ transform: settingsOpen ? "scale(1)" : "scale(0.97)" }}>
-            <div className="flex items-center justify-between border-b px-6 py-4">
-              <h2 className="text-lg font-semibold">Simulation Settings</h2>
-              <Button variant="ghost" size="icon" onClick={closeSettings}>
-                <X className="h-5 w-5" />
-                <span className="sr-only">Close</span>
-              </Button>
-            </div>
-            <div className="max-h-[75vh] overflow-y-auto px-6 py-4">
-              <SimulationParametersPanel
-                rounds={roundsPerMatch}
-                onRoundsChange={onRoundsChange}
-                noiseEnabled={noiseEnabled}
-                onNoiseToggle={onNoiseToggle}
-                noisePercent={noisePercent}
-                onNoisePercentChange={onNoisePercentChange}
-                payoffMatrix={payoffMatrix}
-                onPayoffMatrixChange={onPayoffMatrixChange}
-                seedEnabled={seedEnabled}
-                seedValue={seedValue}
-                onSeedToggle={onSeedToggle}
-                onSeedChange={onSeedChange}
-                doubleRoundRobin={doubleRoundRobin}
-                onDoubleRoundRobinToggle={onDoubleRoundRobinToggle}
-              />
-            </div>
-          </Card>
-        </div>
+      <div
+        className='fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200'
+        aria-hidden={!settingsOpen}
+        style={{ pointerEvents: settingsOpen ? 'auto' : 'none', opacity: settingsOpen ? 1 : 0 }}
+      >
+        <div
+          className='absolute inset-0 bg-black/60 transition-opacity duration-200'
+          onClick={closeSettings}
+          style={{ opacity: settingsOpen ? 1 : 0 }}
+        />
+        <Card
+          className='relative z-10 w-full max-w-3xl overflow-hidden shadow-lg transition-transform duration-200'
+          style={{ transform: settingsOpen ? 'scale(1)' : 'scale(0.97)' }}
+        >
+          <div className='flex items-center justify-between border-b px-6 py-4'>
+            <h2 className='text-lg font-semibold'>Simulation Settings</h2>
+            <Button variant='ghost' size='icon' onClick={closeSettings}>
+              <X className='h-5 w-5' />
+              <span className='sr-only'>Close</span>
+            </Button>
+          </div>
+          <div className='max-h-[75vh] overflow-y-auto px-6 py-4'>
+            <SimulationParametersPanel
+              rounds={roundsPerMatch}
+              onRoundsChange={onRoundsChange}
+              noiseEnabled={noiseEnabled}
+              onNoiseToggle={onNoiseToggle}
+              noisePercent={noisePercent}
+              onNoisePercentChange={onNoisePercentChange}
+              payoffMatrix={payoffMatrix}
+              onPayoffMatrixChange={onPayoffMatrixChange}
+              seedEnabled={seedEnabled}
+              seedValue={seedValue}
+              onSeedToggle={onSeedToggle}
+              onSeedChange={onSeedChange}
+              doubleRoundRobin={doubleRoundRobin}
+              onDoubleRoundRobinToggle={onDoubleRoundRobinToggle}
+            />
+          </div>
+        </Card>
+      </div>
     </Card>
   );
 }
@@ -222,12 +283,29 @@ function App() {
   const [seedEnabled, setSeedEnabled] = useState(false);
   const [seedValue, setSeedValue] = useState('');
   const [doubleRoundRobin, setDoubleRoundRobin] = useState(false);
+  const [strategySearch, setStrategySearch] = useState('');
+  const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>(() =>
+    defaultStrategies.map((strategy) => strategy.name),
+  );
+
+  const activeStrategies = useMemo(
+    () => defaultStrategies.filter((strategy) => selectedStrategyNames.includes(strategy.name)),
+    [selectedStrategyNames],
+  );
 
   const runTournament = () => {
-    console.clear();
+    if (activeStrategies.length < 2) return;
+
     const errorRate = noiseEnabled ? noisePercent / 100 : 0;
     const seed = seedEnabled && seedValue.trim().length > 0 ? seedValue.trim() : undefined;
-    const outcome = simulateTournament(roundsPerMatch, errorRate, payoffMatrix, seed, doubleRoundRobin);
+    const outcome = simulateTournament(
+      roundsPerMatch,
+      errorRate,
+      payoffMatrix,
+      seed,
+      doubleRoundRobin,
+      activeStrategies,
+    );
     setResults(outcome);
   };
 
@@ -247,9 +325,23 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [isLandingFading]);
 
+  const toggleStrategy = (name: string) => {
+    setSelectedStrategyNames((previous) => {
+      const next = new Set(previous);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return defaultStrategies
+        .map((strategy) => strategy.name)
+        .filter((strategyName) => next.has(strategyName));
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <main className="mx-auto flex min-h-screen w-full max-w-4xl lg:max-w-6xl flex-col justify-center px-6 py-12">
+    <div className='min-h-screen bg-background text-foreground'>
+      <main className='mx-auto flex min-h-screen w-full max-w-4xl lg:max-w-6xl flex-col justify-center px-6 py-12'>
         {hasStarted ? (
           <TournamentDashboard
             results={results}
@@ -268,6 +360,11 @@ function App() {
             onSeedChange={setSeedValue}
             doubleRoundRobin={doubleRoundRobin}
             onDoubleRoundRobinToggle={setDoubleRoundRobin}
+            strategySearch={strategySearch}
+            onStrategySearch={setStrategySearch}
+            selectedStrategyNames={selectedStrategyNames}
+            onToggleStrategy={toggleStrategy}
+            activeStrategyCount={activeStrategies.length}
           />
         ) : (
           <LandingScreen onStart={handleEnterLab} isFadingOut={isLandingFading} />
@@ -282,6 +379,3 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
-
-
-

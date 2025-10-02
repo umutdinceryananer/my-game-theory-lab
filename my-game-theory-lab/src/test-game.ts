@@ -1,5 +1,5 @@
 import { Tournament, type TournamentResult } from './core/tournament';
-import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix } from './core/types';
+import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix, type Strategy } from './core/types';
 import { defaultStrategies } from './strategies';
 
 export function simulateTournament(
@@ -8,10 +8,11 @@ export function simulateTournament(
   payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
   seed?: number | string,
   doubleRoundRobin: boolean = false,
+  strategies: Strategy[] = defaultStrategies,
 ): TournamentResult[] {
   const tournament = new Tournament();
   return tournament.run(
-    defaultStrategies,
+    strategies,
     rounds,
     errorRate,
     payoffMatrix,
