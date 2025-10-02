@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import type { TournamentResult } from '@/core/tournament';
 import { simulateTournament } from '@/test-game';
 import { defaultStrategies } from '@/strategies';
+import { StrategyInfoBadge } from '@/components/strategy-info';
 
 type StrategyType = typeof defaultStrategies[number];
 
@@ -138,16 +139,21 @@ function TournamentDashboard({
     useEffect(() => {
       setVisible(true);
       return () => {
-        if (exitTimeout.current) {
+        if (exitTimeout.current !== null) {
           window.clearTimeout(exitTimeout.current);
+          exitTimeout.current = null;
         }
       };
     }, [isSelected]);
 
     const handleToggle = () => {
       setVisible(false);
+      if (exitTimeout.current !== null) {
+        window.clearTimeout(exitTimeout.current);
+      }
       exitTimeout.current = window.setTimeout(() => {
         onToggleStrategy(strategy.name);
+        exitTimeout.current = null;
       }, 150);
     };
 
@@ -167,11 +173,13 @@ function TournamentDashboard({
         <span className='inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground'>
           {strategy.name.slice(0, 2).toUpperCase()}
         </span>
-        <div className='flex-1 space-y-1'>
+        <div className='flex flex-1 items-start justify-between gap-3'>
           <p className='font-medium'>{strategy.name}</p>
-          <p className='text-xs text-muted-foreground'>{strategy.description}</p>
+          <div className='flex items-center gap-1'>
+            <StrategyInfoBadge strategy={strategy} />
+            {isSelected && <Check className='h-4 w-4 text-primary' />}
+          </div>
         </div>
-        {isSelected && <Check className='h-4 w-4 text-primary' />}
       </button>
     );
   };
@@ -499,4 +507,9 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+
+
+
+
 
