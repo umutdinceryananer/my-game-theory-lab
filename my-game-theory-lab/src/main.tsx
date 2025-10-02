@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Menu, Play, Trophy, X } from 'lucide-react';
 
@@ -56,6 +56,8 @@ type DashboardProps = {
   onToggleStrategy: (name: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
+  onAddStrategy: (name: string) => void;
+  onRemoveStrategy: (name: string) => void;
   activeStrategyCount: number;
 };
 
@@ -82,6 +84,8 @@ function TournamentDashboard({
   onToggleStrategy,
   onSelectAll,
   onClearAll,
+  onAddStrategy,
+  onRemoveStrategy,
   activeStrategyCount,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -96,11 +100,9 @@ function TournamentDashboard({
 
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
-
     return defaultStrategies.filter((strategy) => {
       if (!selectedStrategyNames.includes(strategy.name)) return false;
       if (!query) return true;
-
       return (
         strategy.name.toLowerCase().includes(query) ||
         strategy.description.toLowerCase().includes(query)
@@ -110,11 +112,9 @@ function TournamentDashboard({
 
   const filteredAvailableStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
-
     return defaultStrategies.filter((strategy) => {
       if (selectedStrategyNames.includes(strategy.name)) return false;
       if (!query) return true;
-
       return (
         strategy.name.toLowerCase().includes(query) ||
         strategy.description.toLowerCase().includes(query)
@@ -125,7 +125,41 @@ function TournamentDashboard({
   const totalMatches = filteredSelectedStrategies.length + filteredAvailableStrategies.length;
   const hasSearch = strategySearch.trim().length > 0;
 
-  const closeSettings = () => setSettingsOpen(false);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+
+  const handleDragStart = useCallback(
+    (event: React.DragEvent<HTMLButtonElement>, name: string, source: 'selected' | 'available') => {
+      event.stopPropagation();
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('application/x-strategy', JSON.stringify({ name, source }));
+    },
+    [],
+  );
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>, target: 'selected' | 'available') => {
+      event.preventDefault();
+      const raw = event.dataTransfer.getData('application/x-strategy');
+      if (!raw) return;
+      try {
+        const { name } = JSON.parse(raw) as { name: string };
+        if (!name) return;
+        if (target === 'selected') {
+          onAddStrategy(name);
+        } else if (target === 'available') {
+          onRemoveStrategy(name);
+        }
+      } catch {
+        // ignore malformed payloads
+      }
+    },
+    [onAddStrategy, onRemoveStrategy],
+  );
+
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
 
   const StrategyCardItem = ({ strategy, isSelected }: { strategy: StrategyType; isSelected: boolean }) => {
     const [visible, setVisible] = useState(false);
@@ -146,7 +180,7 @@ function TournamentDashboard({
       };
     }, [isSelected]);
 
-    const handleToggle = () => {
+    const handleToggle = useCallback(() => {
       setVisible(false);
       if (exitTimeout.current !== null) {
         window.clearTimeout(exitTimeout.current);
@@ -154,13 +188,31 @@ function TournamentDashboard({
       exitTimeout.current = window.setTimeout(() => {
         onToggleStrategy(strategy.name);
         exitTimeout.current = null;
-      }, 150);
-    };
+      }, 120);
+    }, [onToggleStrategy, strategy.name]);
+
+    const handleDragStartLocal = useCallback(
+      (event: React.DragEvent<HTMLButtonElement>) => {
+        handleDragStart(event, strategy.name, isSelected ? 'selected' : 'available');
+      },
+      [handleDragStart, isSelected, strategy.name],
+    );
+
+    const handleDragEnd = useCallback(() => {
+      if (exitTimeout.current !== null) {
+        window.clearTimeout(exitTimeout.current);
+        exitTimeout.current = null;
+      }
+      setVisible(true);
+    }, []);
 
     return (
       <button
         type='button'
+        draggable
         onClick={handleToggle}
+        onDragStart={handleDragStartLocal}
+        onDragEnd={handleDragEnd}
         className={cn(
           'flex w-full items-center gap-3 rounded-md border p-2 text-left text-sm transition-opacity duration-200',
           visible ? 'opacity-100' : 'opacity-0',
@@ -174,11 +226,8 @@ function TournamentDashboard({
           {strategy.name.slice(0, 2).toUpperCase()}
         </span>
         <div className='flex flex-1 items-center justify-between gap-3'>
-          <p className='font-medium leading-none'>{strategy.name}</p>
-          <div className='flex items-center gap-1'>
-            <StrategyInfoBadge strategy={strategy} />
-            
-          </div>
+          <p className='truncate text-sm font-medium leading-none'>{strategy.name}</p>
+          <StrategyInfoBadge strategy={strategy} />
         </div>
       </button>
     );
@@ -190,9 +239,7 @@ function TournamentDashboard({
         <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
           <div className='space-y-2'>
             <CardTitle>Game Theory Lab</CardTitle>
-            <CardDescription>
-              Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
-            </CardDescription>
+            <CardDescription>Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.</CardDescription>
           </div>
           <div className='flex items-center gap-3'>
             <Button variant='outline' onClick={() => setSettingsOpen(true)} className='flex items-center gap-2'>
@@ -217,39 +264,27 @@ function TournamentDashboard({
               aria-label='Search strategies'
             />
           </div>
-
           <div className='flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
             <span>Selected {selectedStrategyNames.length} / {defaultStrategies.length}</span>
             <div className='flex flex-wrap items-center gap-2'>
               <span>{totalMatches} match{totalMatches === 1 ? '' : 'es'}</span>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={onSelectAll}
-                disabled={selectedStrategyNames.length === defaultStrategies.length}
-              >
-                Select all
-              </Button>
-              <Button
-                variant='ghost'
-                size='sm'
-                onClick={onClearAll}
-                disabled={selectedStrategyNames.length === 0}
-              >
-                Clear all
-              </Button>
+              <Button variant='ghost' size='sm' onClick={onSelectAll} disabled={selectedStrategyNames.length === defaultStrategies.length}>Select all</Button>
+              <Button variant='ghost' size='sm' onClick={onClearAll} disabled={selectedStrategyNames.length === 0}>Clear all</Button>
             </div>
           </div>
 
           <div className='grid gap-4 lg:grid-cols-2'>
-            <div className='space-y-3 rounded-lg border border-dashed border-muted p-4'>
+            <div
+              className='space-y-3 rounded-lg border border-dashed border-muted p-4'
+              onDragOver={handleDragOver}
+              onDrop={(event) => handleDrop(event, 'selected')}
+            >
               <div className='flex items-center justify-between text-xs text-muted-foreground'>
                 <span className='font-semibold uppercase'>Selected</span>
                 {hasSearch && (
                   <span>{filteredSelectedStrategies.length} match{filteredSelectedStrategies.length === 1 ? '' : 'es'}</span>
                 )}
               </div>
-
               {selectedStrategyNames.length === 0 ? (
                 <p className='text-sm text-muted-foreground'>No strategies selected.</p>
               ) : filteredSelectedStrategies.length === 0 ? (
@@ -257,20 +292,25 @@ function TournamentDashboard({
               ) : (
                 <ul className='grid max-h-[18rem] gap-2 overflow-y-auto sm:grid-cols-2 scrollbar-hidden scroll-gradient'>
                   {filteredSelectedStrategies.map((strategy) => (
-                    <li key={strategy.name}><StrategyCardItem strategy={strategy} isSelected={true} /></li>
+                    <li key={strategy.name}>
+                      <StrategyCardItem strategy={strategy} isSelected />
+                    </li>
                   ))}
                 </ul>
               )}
             </div>
 
-            <div className='space-y-3 rounded-lg border border-dashed border-muted p-4'>
+            <div
+              className='space-y-3 rounded-lg border border-dashed border-muted p-4'
+              onDragOver={handleDragOver}
+              onDrop={(event) => handleDrop(event, 'available')}
+            >
               <div className='flex items-center justify-between text-xs text-muted-foreground'>
                 <span className='font-semibold uppercase'>Available</span>
                 {hasSearch && (
                   <span>{filteredAvailableStrategies.length} match{filteredAvailableStrategies.length === 1 ? '' : 'es'}</span>
                 )}
               </div>
-
               {filteredAvailableStrategies.length === 0 ? (
                 <p className='text-sm text-muted-foreground'>
                   {hasSearch
@@ -282,7 +322,9 @@ function TournamentDashboard({
               ) : (
                 <ul className='grid max-h-[18rem] gap-2 overflow-y-auto sm:grid-cols-2 scrollbar-hidden scroll-gradient'>
                   {filteredAvailableStrategies.map((strategy) => (
-                    <li key={strategy.name}><StrategyCardItem strategy={strategy} isSelected={false} /></li>
+                    <li key={strategy.name}>
+                      <StrategyCardItem strategy={strategy} isSelected={false} />
+                    </li>
                   ))}
                 </ul>
               )}
@@ -402,16 +444,16 @@ function App() {
   const [seedValue, setSeedValue] = useState('');
   const [doubleRoundRobin, setDoubleRoundRobin] = useState(false);
   const [strategySearch, setStrategySearch] = useState('');
-  const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>(() =>
-    defaultStrategies.map((strategy) => strategy.name),
-  );
+  const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>([]);
+
+  const strategyOrder = useMemo(() => defaultStrategies.map((strategy) => strategy.name), []);
 
   const activeStrategies = useMemo(
     () => defaultStrategies.filter((strategy) => selectedStrategyNames.includes(strategy.name)),
     [selectedStrategyNames],
   );
 
-  const runTournament = () => {
+  const runTournament = useCallback(() => {
     if (activeStrategies.length < 2) return;
 
     const errorRate = noiseEnabled ? noisePercent / 100 : 0;
@@ -425,12 +467,12 @@ function App() {
       activeStrategies,
     );
     setResults(outcome);
-  };
+  }, [activeStrategies, doubleRoundRobin, noiseEnabled, noisePercent, payoffMatrix, roundsPerMatch, seedEnabled, seedValue]);
 
-  const handleEnterLab = () => {
+  const handleEnterLab = useCallback(() => {
     if (isLandingFading) return;
     setIsLandingFading(true);
-  };
+  }, [isLandingFading]);
 
   useEffect(() => {
     if (!isLandingFading) return undefined;
@@ -443,7 +485,7 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [isLandingFading]);
 
-  const toggleStrategy = (name: string) => {
+  const toggleStrategy = useCallback((name: string) => {
     setSelectedStrategyNames((previous) => {
       const next = new Set(previous);
       if (next.has(name)) {
@@ -451,19 +493,31 @@ function App() {
       } else {
         next.add(name);
       }
-      return defaultStrategies
-        .map((strategy) => strategy.name)
-        .filter((strategyName) => next.has(strategyName));
+      return strategyOrder.filter((strategyName) => next.has(strategyName));
     });
-  };
+  }, [strategyOrder]);
 
-  const selectAll = () => {
-    setSelectedStrategyNames(defaultStrategies.map((strategy) => strategy.name));
-  };
+  const selectAll = useCallback(() => {
+    setSelectedStrategyNames(strategyOrder);
+  }, [strategyOrder]);
 
-  const clearAll = () => {
+  const clearAll = useCallback(() => {
     setSelectedStrategyNames([]);
-  };
+  }, []);
+
+  const addStrategy = useCallback((name: string) => {
+    if (!strategyOrder.includes(name)) return;
+    setSelectedStrategyNames((previous) => {
+      if (previous.includes(name)) return previous;
+      const next = new Set(previous);
+      next.add(name);
+      return strategyOrder.filter((strategyName) => next.has(strategyName));
+    });
+  }, [strategyOrder]);
+
+  const removeStrategy = useCallback((name: string) => {
+    setSelectedStrategyNames((previous) => previous.filter((strategyName) => strategyName !== name));
+  }, []);
 
   return (
     <div className='min-h-screen bg-background text-foreground'>
@@ -492,6 +546,8 @@ function App() {
             onToggleStrategy={toggleStrategy}
             onSelectAll={selectAll}
             onClearAll={clearAll}
+            onAddStrategy={addStrategy}
+            onRemoveStrategy={removeStrategy}
             activeStrategyCount={activeStrategies.length}
           />
         ) : (
@@ -507,18 +563,5 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
