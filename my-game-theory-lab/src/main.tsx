@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useState } from 'react';
+import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Check, Menu, Play, Trophy, X } from 'lucide-react';
 
@@ -29,6 +29,8 @@ import { cn } from '@/lib/utils';
 import type { TournamentResult } from '@/core/tournament';
 import { simulateTournament } from '@/test-game';
 import { defaultStrategies } from '@/strategies';
+
+type StrategyType = typeof defaultStrategies[number];
 
 type DashboardProps = {
   results: TournamentResult[] | null;
@@ -91,23 +93,95 @@ function TournamentDashboard({
 
   const champion = results?.[0];
 
-  const filteredStrategies = useMemo(() => {
+  const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
-    if (!query) return defaultStrategies;
-    return defaultStrategies.filter((strategy) =>
-      strategy.name.toLowerCase().includes(query) ||
-      strategy.description.toLowerCase().includes(query),
-    );
-  }, [strategySearch]);
+
+    return defaultStrategies.filter((strategy) => {
+      if (!selectedStrategyNames.includes(strategy.name)) return false;
+      if (!query) return true;
+
+      return (
+        strategy.name.toLowerCase().includes(query) ||
+        strategy.description.toLowerCase().includes(query)
+      );
+    });
+  }, [selectedStrategyNames, strategySearch]);
+
+  const filteredAvailableStrategies = useMemo(() => {
+    const query = strategySearch.trim().toLowerCase();
+
+    return defaultStrategies.filter((strategy) => {
+      if (selectedStrategyNames.includes(strategy.name)) return false;
+      if (!query) return true;
+
+      return (
+        strategy.name.toLowerCase().includes(query) ||
+        strategy.description.toLowerCase().includes(query)
+      );
+    });
+  }, [selectedStrategyNames, strategySearch]);
+
+  const totalMatches = filteredSelectedStrategies.length + filteredAvailableStrategies.length;
+  const hasSearch = strategySearch.trim().length > 0;
 
   const closeSettings = () => setSettingsOpen(false);
+
+  const StrategyCardItem = ({ strategy, isSelected }: { strategy: StrategyType; isSelected: boolean }) => {
+    const [visible, setVisible] = useState(false);
+    const exitTimeout = useRef<number | null>(null);
+
+    useEffect(() => {
+      const frame = window.requestAnimationFrame(() => setVisible(true));
+      return () => window.cancelAnimationFrame(frame);
+    }, []);
+
+    useEffect(() => {
+      setVisible(true);
+      return () => {
+        if (exitTimeout.current) {
+          window.clearTimeout(exitTimeout.current);
+        }
+      };
+    }, [isSelected]);
+
+    const handleToggle = () => {
+      setVisible(false);
+      exitTimeout.current = window.setTimeout(() => {
+        onToggleStrategy(strategy.name);
+      }, 150);
+    };
+
+    return (
+      <button
+        type='button'
+        onClick={handleToggle}
+        className={cn(
+          'flex h-full w-full items-start gap-3 rounded-md border p-3 text-left text-sm transition-opacity duration-200',
+          visible ? 'opacity-100' : 'opacity-0',
+          isSelected
+            ? 'border-primary bg-secondary/30 text-foreground'
+            : 'border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground',
+        )}
+        aria-pressed={isSelected}
+      >
+        <span className='inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground'>
+          {strategy.name.slice(0, 2).toUpperCase()}
+        </span>
+        <div className='flex-1 space-y-1'>
+          <p className='font-medium'>{strategy.name}</p>
+          <p className='text-xs text-muted-foreground'>{strategy.description}</p>
+        </div>
+        {isSelected && <Check className='h-4 w-4 text-primary' />}
+      </button>
+    );
+  };
 
   return (
     <Card className={cn('transition-opacity duration-500', isVisible ? 'opacity-100' : 'opacity-0')}>
       <CardHeader className='space-y-4'>
         <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
           <div className='space-y-2'>
-            <CardTitle>Umut's Game Theory Lab</CardTitle>
+            <CardTitle>Game Theory Lab</CardTitle>
             <CardDescription>
               Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
             </CardDescription>
@@ -124,8 +198,8 @@ function TournamentDashboard({
         <section className='space-y-4'>
           <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
             <div>
-              <h2 className='text-sm font-semibold uppercase text-muted-foreground'>Included strategies</h2>
-              <p className='text-xs text-muted-foreground'>Select at least two strategies to run a tournament.</p>
+              <h2 className='text-sm font-semibold uppercase text-muted-foreground'>Strategy roster</h2>
+              <p className='text-xs text-muted-foreground'>Pick the strategies that should participate in the tournament.</p>
             </div>
             <Input
               value={strategySearch}
@@ -136,48 +210,76 @@ function TournamentDashboard({
             />
           </div>
 
-          <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className='flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between'>
             <span>Selected {selectedStrategyNames.length} / {defaultStrategies.length}</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <span>{filteredStrategies.length} shown</span>
-              <Button variant="ghost" size="sm" onClick={onSelectAll} disabled={selectedStrategyNames.length === defaultStrategies.length}>Select all</Button>
-              <Button variant="ghost" size="sm" onClick={onClearAll} disabled={selectedStrategyNames.length === 0}>Clear all</Button>
+            <div className='flex flex-wrap items-center gap-2'>
+              <span>{totalMatches} match{totalMatches === 1 ? '' : 'es'}</span>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={onSelectAll}
+                disabled={selectedStrategyNames.length === defaultStrategies.length}
+              >
+                Select all
+              </Button>
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={onClearAll}
+                disabled={selectedStrategyNames.length === 0}
+              >
+                Clear all
+              </Button>
             </div>
           </div>
 
-          {filteredStrategies.length === 0 ? (
-            <p className='text-sm text-muted-foreground'>No strategies match your search.</p>
-          ) : (
-            <ul className='grid gap-2 sm:grid-cols-2'>
-              {filteredStrategies.map((strategy) => {
-                const isSelected = selectedStrategyNames.includes(strategy.name);
-                return (
-                  <li key={strategy.name}>
-                    <button
-                      type='button'
-                      onClick={() => onToggleStrategy(strategy.name)}
-                      className={cn(
-                        'flex h-full w-full items-start gap-3 rounded-md border p-3 text-left text-sm transition',
-                        isSelected
-                          ? 'border-primary bg-secondary/30 text-foreground'
-                          : 'border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground',
-                      )}
-                      aria-pressed={isSelected}
-                    >
-                      <span className='inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground'>
-                        {strategy.name.slice(0, 2).toUpperCase()}
-                      </span>
-                      <div className='flex-1 space-y-1'>
-                        <p className='font-medium'>{strategy.name}</p>
-                        <p className='text-xs text-muted-foreground'>{strategy.description}</p>
-                      </div>
-                      {isSelected && <Check className='h-4 w-4 text-primary' />}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <div className='grid gap-4 lg:grid-cols-2'>
+            <div className='space-y-3 rounded-lg border border-dashed border-muted p-4'>
+              <div className='flex items-center justify-between text-xs text-muted-foreground'>
+                <span className='font-semibold uppercase'>Selected</span>
+                {hasSearch && (
+                  <span>{filteredSelectedStrategies.length} match{filteredSelectedStrategies.length === 1 ? '' : 'es'}</span>
+                )}
+              </div>
+
+              {selectedStrategyNames.length === 0 ? (
+                <p className='text-sm text-muted-foreground'>No strategies selected.</p>
+              ) : filteredSelectedStrategies.length === 0 ? (
+                <p className='text-sm text-muted-foreground'>No selected strategies match your search.</p>
+              ) : (
+                <ul className='grid gap-2'>
+                  {filteredSelectedStrategies.map((strategy) => (
+                    <li key={strategy.name}><StrategyCardItem strategy={strategy} isSelected={true} /></li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className='space-y-3 rounded-lg border border-dashed border-muted p-4'>
+              <div className='flex items-center justify-between text-xs text-muted-foreground'>
+                <span className='font-semibold uppercase'>Available</span>
+                {hasSearch && (
+                  <span>{filteredAvailableStrategies.length} match{filteredAvailableStrategies.length === 1 ? '' : 'es'}</span>
+                )}
+              </div>
+
+              {filteredAvailableStrategies.length === 0 ? (
+                <p className='text-sm text-muted-foreground'>
+                  {hasSearch
+                    ? 'No available strategies match your search.'
+                    : selectedStrategyNames.length === defaultStrategies.length
+                      ? 'All strategies are currently selected.'
+                      : 'No additional strategies available.'}
+                </p>
+              ) : (
+                <ul className='grid gap-2'>
+                  {filteredAvailableStrategies.map((strategy) => (
+                    <li key={strategy.name}><StrategyCardItem strategy={strategy} isSelected={false} /></li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </section>
 
         <section className='space-y-3 rounded-lg border border-dashed border-muted p-4'>
@@ -380,8 +482,8 @@ function App() {
             onStrategySearch={setStrategySearch}
             selectedStrategyNames={selectedStrategyNames}
             onToggleStrategy={toggleStrategy}
-              onSelectAll={selectAll}
-              onClearAll={clearAll}
+            onSelectAll={selectAll}
+            onClearAll={clearAll}
             activeStrategyCount={activeStrategies.length}
           />
         ) : (
@@ -397,9 +499,4 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
-
-
-
-
-
 
