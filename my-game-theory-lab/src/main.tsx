@@ -51,6 +51,8 @@ type DashboardProps = {
   onStrategySearch: (value: string) => void;
   selectedStrategyNames: string[];
   onToggleStrategy: (name: string) => void;
+  onSelectAll: () => void;
+  onClearAll: () => void;
   activeStrategyCount: number;
 };
 
@@ -75,6 +77,8 @@ function TournamentDashboard({
   onStrategySearch,
   selectedStrategyNames,
   onToggleStrategy,
+  onSelectAll,
+  onClearAll,
   activeStrategyCount,
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -103,7 +107,7 @@ function TournamentDashboard({
       <CardHeader className='space-y-4'>
         <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
           <div className='space-y-2'>
-            <CardTitle>Game Theory Lab</CardTitle>
+            <CardTitle>Umut's Game Theory Lab</CardTitle>
             <CardDescription>
               Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
             </CardDescription>
@@ -132,9 +136,13 @@ function TournamentDashboard({
             />
           </div>
 
-          <div className='flex items-center justify-between text-xs text-muted-foreground'>
+          <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <span>Selected {selectedStrategyNames.length} / {defaultStrategies.length}</span>
-            <span>{filteredStrategies.length} shown</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <span>{filteredStrategies.length} shown</span>
+              <Button variant="ghost" size="sm" onClick={onSelectAll} disabled={selectedStrategyNames.length === defaultStrategies.length}>Select all</Button>
+              <Button variant="ghost" size="sm" onClick={onClearAll} disabled={selectedStrategyNames.length === 0}>Clear all</Button>
+            </div>
           </div>
 
           {filteredStrategies.length === 0 ? (
@@ -339,6 +347,14 @@ function App() {
     });
   };
 
+  const selectAll = () => {
+    setSelectedStrategyNames(defaultStrategies.map((strategy) => strategy.name));
+  };
+
+  const clearAll = () => {
+    setSelectedStrategyNames([]);
+  };
+
   return (
     <div className='min-h-screen bg-background text-foreground'>
       <main className='mx-auto flex min-h-screen w-full max-w-4xl lg:max-w-6xl flex-col justify-center px-6 py-12'>
@@ -364,6 +380,8 @@ function App() {
             onStrategySearch={setStrategySearch}
             selectedStrategyNames={selectedStrategyNames}
             onToggleStrategy={toggleStrategy}
+              onSelectAll={selectAll}
+              onClearAll={clearAll}
             activeStrategyCount={activeStrategies.length}
           />
         ) : (
@@ -379,3 +397,9 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+
+
+
+
+
