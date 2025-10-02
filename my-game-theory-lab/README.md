@@ -30,14 +30,10 @@ Interactive React/Vite sandbox for iterated Prisoner's Dilemma tournaments. Stra
 
 ## Useful Scripts
 
-- 
-pm run dev: start Vite in development mode.
-- 
-pm run build: type-check and build the production bundle.
-- 
-pm run preview: locally preview the production build.
-- 
-pm run lint: run ESLint with the configured TypeScript rules.
+- npm run dev: start Vite in development mode.
+- npm run build: type-check and build the production bundle.
+- npm run preview: locally preview the production build.
+- npm run lint: run ESLint with the configured TypeScript rules.
 
 ## Customization Tips
 
