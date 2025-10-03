@@ -16,16 +16,16 @@ Interactive React/Vite sandbox for iterated Prisoner's Dilemma tournaments. Stra
 
 ## Features
 
-- **Tournament engine** � src/core implements the match logic, supports custom round counts, and can inject noise that flips moves to emulate miscommunication. The round-robin driver aggregates scores and ranks strategies.
-- **Strategy catalog** � src/strategies ships Always Cooperate, Always Defect, Tit-for-Tat, and Random as baselines. Add new behaviours by exporting additional strategies and including them in defaultStrategies.
-- **Onboarding flow** � src/components/landing-screen.tsx greets users with a fade transition before dropping them into the dashboard.
-- **Simulation control panel** � src/components/panels/simulation-parameters.tsx exposes rounds-per-match, a noise toggle, and advanced slider/number inputs for fine-tuning error rates.
-- **Monochrome shadcn shell** � Cards, badges, tables, buttons, switches, and inputs live in src/components/ui, styled via tokens defined in src/index.css and 	ailwind.config.ts.
+- **Tournament engine**  src/core implements the match logic, supports custom round counts, and can inject noise that flips moves to emulate miscommunication. The round-robin driver aggregates scores and ranks strategies.
+- **Strategy catalog**  src/strategies ships Always Cooperate, Always Defect, Tit-for-Tat, and Random as baselines. Add new behaviours by exporting additional strategies and including them in defaultStrategies.
+- **Onboarding flow**  src/components/landing-screen.tsx greets users with a fade transition before dropping them into the dashboard.
+- **Simulation control panel**  src/components/panels/simulation-parameters.tsx exposes rounds-per-match, a noise toggle, and advanced slider/number inputs for fine-tuning error rates.
+- **Monochrome shadcn shell**  Cards, badges, tables, buttons, switches, and inputs live in src/components/ui, styled via tokens defined in src/index.css and 	ailwind.config.ts.
 
 ## Simulation Controls
 
-- **Rounds per match** � Choose any integer from 1�1000 to test short- or long-horizon behaviour.
-- **Noise toggle** � Quickly enable or disable move flips. When enabled, use the advanced controls to set the 0�100% probability that each move is inverted.
+- **Rounds per match**  Choose any integer from 1-1000 to test short- or long-horizon behaviour.
+- **Noise toggle**  Quickly enable or disable move flips. When enabled, use the advanced controls to set the 0�100% probability that each move is inverted.
 - Results stream to the browser console and populate the standings table in real time.
 
 ## Useful Scripts
