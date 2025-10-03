@@ -193,22 +193,22 @@ function TournamentDashboard({
     }, [isSelected]);
 
     const handleToggle = useCallback(() => {
-      setVisible(false);
-      if (exitTimeout.current !== null) {
-        window.clearTimeout(exitTimeout.current);
-      }
-      exitTimeout.current = window.setTimeout(() => {
-        onToggleStrategy(strategy.name);
-        exitTimeout.current = null;
-      }, 120);
-    }, [onToggleStrategy, strategy.name]);
+        setVisible(false);
+        if (exitTimeout.current !== null) {
+          window.clearTimeout(exitTimeout.current);
+        }
+        exitTimeout.current = window.setTimeout(() => {
+          onToggleStrategy(strategy.name);
+          exitTimeout.current = null;
+        }, 120);
+      }, [strategy.name]);
 
-    const handleDragStartLocal = useCallback(
-      (event: React.DragEvent<HTMLButtonElement>) => {
-        handleDragStart(event, strategy.name, isSelected ? "selected" : "available");
-      },
-      [handleDragStart, isSelected, strategy.name]
-    );
+      const handleDragStartLocal = useCallback(
+        (event: React.DragEvent<HTMLButtonElement>) => {
+          handleDragStart(event, strategy.name, isSelected ? "selected" : "available");
+        },
+        [isSelected, strategy.name] // 👈 'handleDragStart' kaldırıldı
+      );
 
     const handleDragEnd = useCallback(() => {
       if (exitTimeout.current !== null) {
