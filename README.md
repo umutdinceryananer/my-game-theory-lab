@@ -44,4 +44,37 @@ Interactive React/Vite sandbox for iterated Prisoner's Dilemma tournaments. Stra
 - Re-export new UI atoms from src/components/ui to keep imports tidy (@/components/ui/...).
 - Extend src/strategies/index.ts with custom strategies and rerun the tournament to see how they fare.
 
+## Download
+
+Get the latest packaged build from **Releases** (right sidebar on GitHub).  
+After downloading the ZIP, extract it and serve the `dist/` folder with any static server:
+
+```bash
+# example: using vite's preview or a static server
+npm run preview
+# or
+npx serve dist
+
+
+**Commit message:** `docs: add simple Download section`
+
+---
+
+# Step 2 — Prepare version and tag
+
+**Why:** Releases are tied to tags like `v0.1.0`.
+
+```bash
+# update version in package.json (optional but recommended)
+npm version 0.1.0 --no-git-tag-version
+
+git add .
+git commit -m "chore: prepare v0.1.0"
+
+# create and push the tag
+git tag v0.1.0
+git push origin main --tags
+
+
+
 Happy experimenting!
