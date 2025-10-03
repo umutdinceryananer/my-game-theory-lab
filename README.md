@@ -1,5 +1,6 @@
-![CI](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/ci.yml/badge.svg)
-
+[![CI](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/umutdinceryananer/My-Game-Theory-Lab?display_name=tag&sort=semver)](https://github.com/umutdinceryananer/My-Game-Theory-Lab/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 # Game Theory Lab
 
