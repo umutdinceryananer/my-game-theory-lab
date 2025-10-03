@@ -1,3 +1,6 @@
+![CI](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/ci.yml/badge.svg)
+
+
 # Game Theory Lab
 
 Interactive React/Vite sandbox for iterated Prisoner's Dilemma tournaments. Strategies face off in a configurable simulation engine, and the monochrome UI is styled with Tailwind CSS + shadcn/ui components.
