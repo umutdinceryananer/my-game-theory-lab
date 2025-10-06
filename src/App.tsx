@@ -28,6 +28,8 @@ import type { TournamentResult } from "@/core/tournament";
 import { simulateTournament } from "@/test-game";
 import { defaultStrategies } from "@/strategies";
 import { StrategyInfoBadge } from "@/components/strategy-info";
+import { StrategySummaryInlineCard } from "@/components/analytics/StrategySummaryInlineCard";
+import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
 
 type StrategyType = (typeof defaultStrategies)[number];
 
@@ -88,13 +90,26 @@ function TournamentDashboard({
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { getSummary } = useTournamentAnalytics(results);
+  const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsVisible(true));
     return () => window.cancelAnimationFrame(id);
   }, []);
 
-  const champion = results?.[0];
+  useEffect(() => {
+    if (!results || results.length === 0) {
+      setExpandedStrategyName(null);
+      return;
+    }
+
+    if (!expandedStrategyName || !results.some((item) => item.name === expandedStrategyName)) {
+      setExpandedStrategyName(results[0].name);
+    }
+  }, [results, expandedStrategyName]);
+
+  const champion = results?.[0] ?? null;
 
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
@@ -207,7 +222,7 @@ function TournamentDashboard({
         (event: React.DragEvent<HTMLButtonElement>) => {
           handleDragStart(event, strategy.name, isSelected ? "selected" : "available");
         },
-        [isSelected, strategy.name] // 👈 'handleDragStart' kaldırıldı
+        [isSelected, strategy.name] // handleDragStart bağımlılığını koru
       );
 
     const handleDragEnd = useCallback(() => {
@@ -417,31 +432,61 @@ function TournamentDashboard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {results.map((result, index) => (
-                  <TableRow
-                    key={result.name}
-                    data-state={index === 0 ? "selected" : undefined}
-                  >
-                    <TableCell className="font-medium">#{index + 1}</TableCell>
-                    <TableCell
-                      className={cn(
-                        "text-sm",
-                        index === 0 && "font-semibold text-foreground"
-                      )}
+                {results.map((result, index) => {
+                  const isExpanded = result.name === expandedStrategyName;
+                  const summary = getSummary(result.name);
+
+                  const baseRow = (
+                    <TableRow
+                      key={result.name}
+                      data-state={isExpanded ? "selected" : undefined}
+                      className={cn("cursor-pointer", isExpanded && "bg-muted")}
+                      onClick={() => setExpandedStrategyName(result.name)}
+                      onFocus={() => setExpandedStrategyName(result.name)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setExpandedStrategyName(result.name);
+                        }
+                      }}
+                      tabIndex={0}
+                      aria-selected={isExpanded}
                     >
-                      {result.name}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {result.totalScore}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {result.averageScore.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono text-sm">
-                      {result.wins}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      <TableCell className="font-medium">#{index + 1}</TableCell>
+                      <TableCell
+                        className={cn(
+                          "text-sm",
+                          index === 0 && "font-semibold text-foreground"
+                        )}
+                      >
+                        {result.name}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {result.totalScore}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {result.averageScore.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {result.wins}
+                      </TableCell>
+                    </TableRow>
+                  );
+
+                  if (!isExpanded || !summary) {
+                    return baseRow;
+                  }
+
+                  return (
+                    <TableRow key={result.name} data-variant="summary">
+                      <TableCell colSpan={5} className="bg-muted/30 p-0">
+                        <div className="px-4 py-3">
+                          <StrategySummaryInlineCard summary={summary} rank={index + 1} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
@@ -462,6 +507,7 @@ function TournamentDashboard({
           Run Tournament
         </Button>
       </CardFooter>
+
 
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200"
