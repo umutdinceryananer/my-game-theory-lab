@@ -24,7 +24,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix } from "@/core/types";
 import { cn } from "@/lib/utils";
-import type { TournamentResult } from "@/core/tournament";
+import {
+  DEFAULT_TOURNAMENT_FORMAT,
+  type TournamentFormat,
+  type TournamentResult,
+} from "@/core/tournament";
 import { simulateTournament } from "@/test-game";
 import { defaultStrategies } from "@/strategies";
 import { StrategyInfoBadge } from "@/components/strategy-info";
@@ -48,8 +52,9 @@ type DashboardProps = {
   seedValue: string;
   onSeedToggle: (enabled: boolean) => void;
   onSeedChange: (value: string) => void;
-  doubleRoundRobin: boolean;
-  onDoubleRoundRobinToggle: (enabled: boolean) => void;
+  lastRunFormat: TournamentFormat | null;
+  tournamentFormat: TournamentFormat;
+  onTournamentFormatChange: (format: TournamentFormat) => void;
   strategySearch: string;
   onStrategySearch: (value: string) => void;
   selectedStrategyNames: string[];
@@ -76,8 +81,9 @@ function TournamentDashboard({
   seedValue,
   onSeedToggle,
   onSeedChange,
-  doubleRoundRobin,
-  onDoubleRoundRobinToggle,
+  lastRunFormat,
+  tournamentFormat,
+  onTournamentFormatChange,
   strategySearch,
   onStrategySearch,
   selectedStrategyNames,
@@ -138,6 +144,24 @@ function TournamentDashboard({
   const totalMatches =
     filteredSelectedStrategies.length + filteredAvailableStrategies.length;
   const hasSearch = strategySearch.trim().length > 0;
+
+  const effectiveFormat = useMemo(
+    () => (results ? lastRunFormat ?? tournamentFormat : tournamentFormat),
+    [lastRunFormat, results, tournamentFormat],
+  );
+
+  const formatLabel = useMemo(() => {
+    switch (effectiveFormat.kind) {
+      case 'single-round-robin':
+        return 'Single round-robin';
+      case 'double-round-robin':
+        return 'Double round-robin';
+      case 'swiss':
+        return 'Swiss pairings';
+      default:
+        return 'Custom format';
+    }
+  }, [effectiveFormat]);
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
@@ -401,7 +425,7 @@ function TournamentDashboard({
         </section>
 
         <section className="space-y-3 rounded-lg border border-dashed border-muted p-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold uppercase text-muted-foreground">
                 Latest standings
@@ -410,14 +434,19 @@ function TournamentDashboard({
                 Sorted by cumulative score; average shows match-level performance.
               </p>
             </div>
-            {champion ? (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Trophy className="h-3.5 w-3.5" />
-                {champion.name}
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">
+                {formatLabel}
               </Badge>
-            ) : (
-              <Badge variant="outline">Run to populate</Badge>
-            )}
+              {champion ? (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Trophy className="h-3.5 w-3.5" />
+                  {champion.name}
+                </Badge>
+              ) : (
+                <Badge variant="outline">Run to populate</Badge>
+              )}
+            </div>
           </div>
 
           {results ? (
@@ -547,8 +576,8 @@ function TournamentDashboard({
               seedValue={seedValue}
               onSeedToggle={onSeedToggle}
               onSeedChange={onSeedChange}
-              doubleRoundRobin={doubleRoundRobin}
-              onDoubleRoundRobinToggle={onDoubleRoundRobinToggle}
+              tournamentFormat={tournamentFormat}
+              onTournamentFormatChange={onTournamentFormatChange}
             />
           </div>
         </Card>
@@ -569,7 +598,10 @@ export default function App() {
   }));
   const [seedEnabled, setSeedEnabled] = useState(false);
   const [seedValue, setSeedValue] = useState("");
-  const [doubleRoundRobin, setDoubleRoundRobin] = useState(false);
+  const [tournamentFormat, setTournamentFormat] = useState<TournamentFormat>(
+    DEFAULT_TOURNAMENT_FORMAT,
+  );
+  const [lastRunFormat, setLastRunFormat] = useState<TournamentFormat | null>(null);
   const [strategySearch, setStrategySearch] = useState("");
   const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>(
     []
@@ -596,18 +628,19 @@ export default function App() {
       seedEnabled && seedValue.trim().length > 0
         ? seedValue.trim()
         : undefined;
-    const outcome = simulateTournament(
-      roundsPerMatch,
+    const outcome = simulateTournament({
+      rounds: roundsPerMatch,
       errorRate,
       payoffMatrix,
       seed,
-      doubleRoundRobin,
-      activeStrategies
-    );
+      format: tournamentFormat,
+      strategies: activeStrategies,
+    });
     setResults(outcome);
+    setLastRunFormat(tournamentFormat);
   }, [
     activeStrategies,
-    doubleRoundRobin,
+    tournamentFormat,
     noiseEnabled,
     noisePercent,
     payoffMatrix,
@@ -693,8 +726,9 @@ export default function App() {
             seedValue={seedValue}
             onSeedToggle={setSeedEnabled}
             onSeedChange={setSeedValue}
-            doubleRoundRobin={doubleRoundRobin}
-            onDoubleRoundRobinToggle={setDoubleRoundRobin}
+            lastRunFormat={lastRunFormat}
+            tournamentFormat={tournamentFormat}
+            onTournamentFormatChange={setTournamentFormat}
             strategySearch={strategySearch}
             onStrategySearch={setStrategySearch}
             selectedStrategyNames={selectedStrategyNames}

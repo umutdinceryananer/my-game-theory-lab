@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import type { PayoffMatrix } from '@/core/types';
+import type { TournamentFormat } from '@/core/tournament';
 import { cn } from '@/lib/utils';
 
 import { PayoffMatrixEditor } from './payoff-matrix-editor';
@@ -24,8 +25,8 @@ export type SimulationParametersProps = {
   seedValue: string;
   onSeedToggle: (enabled: boolean) => void;
   onSeedChange: (value: string) => void;
-  doubleRoundRobin: boolean;
-  onDoubleRoundRobinToggle: (enabled: boolean) => void;
+  tournamentFormat: TournamentFormat;
+  onTournamentFormatChange: (format: TournamentFormat) => void;
 };
 
 export function SimulationParametersPanel({
@@ -41,8 +42,8 @@ export function SimulationParametersPanel({
   seedValue,
   onSeedToggle,
   onSeedChange,
-  doubleRoundRobin,
-  onDoubleRoundRobinToggle,
+  tournamentFormat,
+  onTournamentFormatChange,
 }: SimulationParametersProps) {
   const [showNoiseSettings, setShowNoiseSettings] = useState(false);
   const [showPayoffSettings, setShowPayoffSettings] = useState(false);
@@ -145,18 +146,34 @@ export function SimulationParametersPanel({
       </div>
 
       <div className="space-y-3 rounded-md border border-dashed border-muted p-3">
-        <div className="flex items-center justify-between gap-4">
+        <div className="space-y-3">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Double round-robin</p>
+            <p className="text-sm font-medium text-muted-foreground">Tournament format</p>
             <p className="text-xs text-muted-foreground">
-              Play each matchup twice so every strategy moves first once.
+              Pick how strategies are paired while Swiss-style pairings are in the works.
             </p>
           </div>
-          <Switch
-            checked={doubleRoundRobin}
-            onCheckedChange={onDoubleRoundRobinToggle}
-            aria-label="Toggle double round-robin"
-          />
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              type="button"
+              variant={tournamentFormat.kind === 'single-round-robin' ? 'default' : 'outline'}
+              aria-pressed={tournamentFormat.kind === 'single-round-robin'}
+              onClick={() => onTournamentFormatChange({ kind: 'single-round-robin' })}
+            >
+              Single round-robin
+            </Button>
+            <Button
+              type="button"
+              variant={tournamentFormat.kind === 'double-round-robin' ? 'default' : 'outline'}
+              aria-pressed={tournamentFormat.kind === 'double-round-robin'}
+              onClick={() => onTournamentFormatChange({ kind: 'double-round-robin' })}
+            >
+              Double round-robin
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Swiss controls will land here soon so you can tune rounds and tie-breakers.
+          </p>
         </div>
       </div>
 

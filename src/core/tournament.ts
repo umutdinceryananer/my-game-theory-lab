@@ -3,6 +3,25 @@ import { DEFAULT_PAYOFF_MATRIX } from './types';
 import { PrisonersDilemmaGame } from './game';
 import { createRandomSource } from './random';
 
+export type TournamentFormatKind = 'single-round-robin' | 'double-round-robin' | 'swiss';
+
+export type RoundRobinTournamentFormat =
+  | { kind: 'single-round-robin' }
+  | { kind: 'double-round-robin' };
+
+export interface SwissTournamentFormat {
+  kind: 'swiss';
+  rounds?: number;
+  tieBreaker?: 'buchholz' | 'sonneborn-berger' | 'total-score';
+}
+
+export type TournamentFormat = RoundRobinTournamentFormat | SwissTournamentFormat;
+
+export const DEFAULT_TOURNAMENT_FORMAT: TournamentFormat = { kind: 'single-round-robin' };
+
+const assertUnreachable = (value: never): never => {
+  throw new Error(`Unsupported tournament format: ${String(value)}`);
+};
 export interface HeadToHeadSummary {
   opponent: string;
   matches: number;
@@ -45,6 +64,26 @@ const createHeadStats = (): HeadToHeadStats => ({
 // Simple tournament - just what we need
 export class Tournament {
   private game = new PrisonersDilemmaGame();
+
+  runWithFormat(
+    format: TournamentFormat,
+    strategies: Strategy[],
+    roundsPerMatch: number = 100,
+    errorRate: number = 0,
+    payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
+    seed?: number | string,
+  ): TournamentResult[] {
+    switch (format.kind) {
+      case 'single-round-robin':
+        return this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, false);
+      case 'double-round-robin':
+        return this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, true);
+      case 'swiss':
+        throw new Error('Swiss tournament format is not implemented yet');
+      default:
+        return assertUnreachable(format as never);
+    }
+  }
 
   /**
    * Run a round-robin tournament
@@ -209,3 +248,5 @@ export class Tournament {
     return lines;
   }
 }
+
+
