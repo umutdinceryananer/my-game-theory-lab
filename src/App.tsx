@@ -115,7 +115,9 @@ function TournamentDashboard({
       return;
     }
 
-    if (!expandedStrategyName || !results.some((item) => item.name === expandedStrategyName)) {
+    const hasExpanded = results.some((item) => item.name === expandedStrategyName);
+  
+    if (!expandedStrategyName || !hasExpanded) {
       setExpandedStrategyName(results[0].name);
     }
   }, [results, expandedStrategyName]);
