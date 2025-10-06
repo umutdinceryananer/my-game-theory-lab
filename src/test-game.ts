@@ -1,4 +1,4 @@
-import { Tournament, type TournamentResult, DEFAULT_TOURNAMENT_FORMAT, type TournamentFormat } from './core/tournament';
+import { Tournament, type TournamentOutcome, DEFAULT_TOURNAMENT_FORMAT, type TournamentFormat } from './core/tournament';
 import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix, type Strategy } from './core/types';
 import { defaultStrategies } from './strategies';
 
@@ -12,7 +12,7 @@ export interface SimulateTournamentOptions {
   strategies?: Strategy[];
 }
 
-export function simulateTournament(options: SimulateTournamentOptions = {}): TournamentResult[] {
+export function simulateTournament(options: SimulateTournamentOptions = {}): TournamentOutcome {
   const {
     rounds = 100,
     errorRate = 0,
@@ -29,3 +29,4 @@ export function simulateTournament(options: SimulateTournamentOptions = {}): Tou
   const tournament = new Tournament();
   return tournament.runWithFormat(effectiveFormat, strategies, rounds, errorRate, payoffMatrix, seed);
 }
+

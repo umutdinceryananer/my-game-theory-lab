@@ -22,6 +22,40 @@ export const DEFAULT_TOURNAMENT_FORMAT: TournamentFormat = { kind: 'single-round
 const assertUnreachable = (value: never): never => {
   throw new Error(`Unsupported tournament format: ${String(value)}`);
 };
+export interface SwissRoundMatchSummary {
+  player: string;
+  opponent: string;
+  playerScore: number;
+  opponentScore: number;
+  winner: 'player' | 'opponent' | 'draw';
+}
+
+export interface SwissByeSummary {
+  player: string;
+  awardedScore: number;
+}
+
+export interface SwissLeaderboardEntry {
+  name: string;
+  totalScore: number;
+  wins: number;
+  matchesPlayed: number;
+  buchholz?: number;
+  sonnebornBerger?: number;
+}
+
+export interface SwissRoundSummary {
+  round: number;
+  matches: SwissRoundMatchSummary[];
+  byes: SwissByeSummary[];
+  leaderboard: SwissLeaderboardEntry[];
+}
+
+export interface TournamentOutcome {
+  format: TournamentFormat;
+  results: TournamentResult[];
+  swissRounds?: SwissRoundSummary[];
+}
 export interface HeadToHeadSummary {
   opponent: string;
   matches: number;
@@ -65,46 +99,15 @@ const createHeadStats = (): HeadToHeadStats => ({
 export class Tournament {
   private game = new PrisonersDilemmaGame();
 
-  runWithFormat(
-    format: TournamentFormat,
+  private initializeState(
     strategies: Strategy[],
-    roundsPerMatch: number = 100,
-    errorRate: number = 0,
-    payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
-    seed?: number | string,
-  ): TournamentResult[] {
-    switch (format.kind) {
-      case 'single-round-robin':
-        return this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, false);
-      case 'double-round-robin':
-        return this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, true);
-      case 'swiss':
-        throw new Error('Swiss tournament format is not implemented yet');
-      default:
-        return assertUnreachable(format as never);
-    }
-  }
-
-  /**
-   * Run a round-robin tournament
-   */
-  run(
-    strategies: Strategy[],
-    roundsPerMatch: number = 100,
-    errorRate: number = 0,
-    payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
-    seed?: number | string,
-    doubleRoundRobin: boolean = false,
-  ): TournamentResult[] {
-    if (strategies.length < 2) {
-      throw new Error('Need at least 2 strategies');
-    }
-
-    const seededRandom = seed !== undefined ? createRandomSource(seed) : undefined;
-
+  ): {
+    results: TournamentResult[];
+    scores: number[][];
+    headToHeadMaps: Map<string, HeadToHeadStats>[];
+  } {
     const scores: number[][] = strategies.map(() => []);
     const headToHeadMaps: Map<string, HeadToHeadStats>[] = strategies.map(() => new Map());
-
     const results: TournamentResult[] = strategies.map((strategy) => ({
       name: strategy.name,
       totalScore: 0,
@@ -115,87 +118,40 @@ export class Tournament {
       headToHead: [],
     }));
 
-    const updateHeadToHead = (
-      map: Map<string, HeadToHeadStats>,
-      opponent: string,
-      playerScore: number,
-      opponentScore: number,
-    ) => {
-      const entry = map.get(opponent) ?? createHeadStats();
-      entry.matches += 1;
-      entry.playerScore += playerScore;
-      entry.opponentScore += opponentScore;
-      if (playerScore > opponentScore) entry.wins += 1;
-      else if (playerScore === opponentScore) entry.draws += 1;
-      else entry.losses += 1;
-      map.set(opponent, entry);
-    };
+    return { results, scores, headToHeadMaps };
+  }
 
-    // Play all matches
-    for (let i = 0; i < strategies.length; i++) {
-      for (let j = i + 1; j < strategies.length; j++) {
-        const randomSource = seededRandom ?? createRandomSource();
-        const match = this.game.playMatch(
-          strategies[i],
-          strategies[j],
-          roundsPerMatch,
-          errorRate,
-          payoffMatrix,
-          randomSource,
-        );
+  private updateHeadToHead(
+    map: Map<string, HeadToHeadStats>,
+    opponent: string,
+    playerScore: number,
+    opponentScore: number,
+  ) {
+    const entry = map.get(opponent) ?? createHeadStats();
+    entry.matches += 1;
+    entry.playerScore += playerScore;
+    entry.opponentScore += opponentScore;
+    if (playerScore > opponentScore) entry.wins += 1;
+    else if (playerScore === opponentScore) entry.draws += 1;
+    else entry.losses += 1;
+    map.set(opponent, entry);
+  }
 
-        // Update scores
-        results[i].totalScore += match.player1Score;
-        results[j].totalScore += match.player2Score;
-        results[i].matchesPlayed += 1;
-        results[j].matchesPlayed += 1;
-
-        scores[i].push(match.player1Score);
-        scores[j].push(match.player2Score);
-
-        updateHeadToHead(headToHeadMaps[i], strategies[j].name, match.player1Score, match.player2Score);
-        updateHeadToHead(headToHeadMaps[j], strategies[i].name, match.player2Score, match.player1Score);
-
-        // Count wins
-        if (match.player1Score > match.player2Score) results[i].wins++;
-        else if (match.player2Score > match.player1Score) results[j].wins++;
-
-        if (doubleRoundRobin) {
-          const randomSourceRematch = seededRandom ?? createRandomSource();
-          const rematch = this.game.playMatch(
-            strategies[j],
-            strategies[i],
-            roundsPerMatch,
-            errorRate,
-            payoffMatrix,
-            randomSourceRematch,
-          );
-
-          results[i].totalScore += rematch.player2Score;
-          results[j].totalScore += rematch.player1Score;
-          results[i].matchesPlayed += 1;
-          results[j].matchesPlayed += 1;
-
-          scores[i].push(rematch.player2Score);
-          scores[j].push(rematch.player1Score);
-
-          updateHeadToHead(headToHeadMaps[i], strategies[j].name, rematch.player2Score, rematch.player1Score);
-          updateHeadToHead(headToHeadMaps[j], strategies[i].name, rematch.player1Score, rematch.player2Score);
-
-          if (rematch.player2Score > rematch.player1Score) results[i].wins++;
-          else if (rematch.player1Score > rematch.player2Score) results[j].wins++;
-        }
-      }
-    }
-
-    // Compute aggregates
+  private finalizeResults(
+    results: TournamentResult[],
+    scores: number[][],
+    headToHeadMaps: Map<string, HeadToHeadStats>[],
+    sortResults: (a: TournamentResult, b: TournamentResult) => number = (a, b) =>
+      b.totalScore - a.totalScore,
+  ): TournamentResult[] {
     results.forEach((result, index) => {
       if (result.matchesPlayed > 0) {
         result.averageScore = result.totalScore / result.matchesPlayed;
         const playerScores = scores[index];
         if (playerScores.length > 1) {
           const mean = result.averageScore;
-          const variance = playerScores.reduce((acc, score) => acc + (score - mean) ** 2, 0) / playerScores.length;
+          const variance =
+            playerScores.reduce((acc, score) => acc + (score - mean) ** 2, 0) / playerScores.length;
           result.stdDeviation = Math.sqrt(variance);
         } else {
           result.stdDeviation = 0;
@@ -219,10 +175,359 @@ export class Tournament {
       result.headToHead = headSummaries;
     });
 
-    results.sort((a, b) => b.totalScore - a.totalScore);
+    results.sort(sortResults);
 
     return results;
   }
+
+  runWithFormat(
+    format: TournamentFormat,
+    strategies: Strategy[],
+    roundsPerMatch: number = 100,
+    errorRate: number = 0,
+    payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
+    seed?: number | string,
+  ): TournamentOutcome {
+    switch (format.kind) {
+      case 'single-round-robin': {
+        const results = this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, false);
+        return { format, results };
+      }
+      case 'double-round-robin': {
+        const results = this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, true);
+        return { format, results };
+      }
+      case 'swiss': {
+        const { results, rounds } = this.runSwiss(
+          format,
+          strategies,
+          roundsPerMatch,
+          errorRate,
+          payoffMatrix,
+          seed,
+        );
+        return { format, results, swissRounds: rounds };
+      }
+      default:
+        return assertUnreachable(format as never);
+    }
+  }
+
+  /**
+   * Run a round-robin tournament
+   */
+  run(
+    strategies: Strategy[],
+    roundsPerMatch: number = 100,
+    errorRate: number = 0,
+    payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
+    seed?: number | string,
+    doubleRoundRobin: boolean = false,
+  ): TournamentResult[] {
+    if (strategies.length < 2) {
+      throw new Error('Need at least 2 strategies');
+    }
+
+    const seededRandom = seed !== undefined ? createRandomSource(seed) : undefined;
+
+    const { results, scores, headToHeadMaps } = this.initializeState(strategies);
+
+    for (let i = 0; i < strategies.length; i++) {
+      for (let j = i + 1; j < strategies.length; j++) {
+        const randomSource = seededRandom ?? createRandomSource();
+        const match = this.game.playMatch(
+          strategies[i],
+          strategies[j],
+          roundsPerMatch,
+          errorRate,
+          payoffMatrix,
+          randomSource,
+        );
+
+        results[i].totalScore += match.player1Score;
+        results[j].totalScore += match.player2Score;
+        results[i].matchesPlayed += 1;
+        results[j].matchesPlayed += 1;
+
+        scores[i].push(match.player1Score);
+        scores[j].push(match.player2Score);
+
+        this.updateHeadToHead(headToHeadMaps[i], strategies[j].name, match.player1Score, match.player2Score);
+        this.updateHeadToHead(headToHeadMaps[j], strategies[i].name, match.player2Score, match.player1Score);
+
+        if (match.player1Score > match.player2Score) results[i].wins += 1;
+        else if (match.player2Score > match.player1Score) results[j].wins += 1;
+
+        if (doubleRoundRobin) {
+          const randomSourceRematch = seededRandom ?? createRandomSource();
+          const rematch = this.game.playMatch(
+            strategies[j],
+            strategies[i],
+            roundsPerMatch,
+            errorRate,
+            payoffMatrix,
+            randomSourceRematch,
+          );
+
+          results[i].totalScore += rematch.player2Score;
+          results[j].totalScore += rematch.player1Score;
+          results[i].matchesPlayed += 1;
+          results[j].matchesPlayed += 1;
+
+          scores[i].push(rematch.player2Score);
+          scores[j].push(rematch.player1Score);
+
+          this.updateHeadToHead(headToHeadMaps[i], strategies[j].name, rematch.player2Score, rematch.player1Score);
+          this.updateHeadToHead(headToHeadMaps[j], strategies[i].name, rematch.player1Score, rematch.player2Score);
+
+          if (rematch.player2Score > rematch.player1Score) results[i].wins += 1;
+          else if (rematch.player1Score > rematch.player2Score) results[j].wins += 1;
+        }
+      }
+    }
+
+    return this.finalizeResults(results, scores, headToHeadMaps);
+  }
+
+  private runSwiss(
+    format: SwissTournamentFormat,
+    strategies: Strategy[],
+    roundsPerMatch: number,
+    errorRate: number,
+    payoffMatrix: PayoffMatrix,
+    seed?: number | string,
+  ): { results: TournamentResult[]; rounds: SwissRoundSummary[] } {
+    if (strategies.length < 2) {
+      throw new Error('Need at least 2 strategies');
+    }
+
+    const seededRandom = seed !== undefined ? createRandomSource(seed) : undefined;
+    const { results, scores, headToHeadMaps } = this.initializeState(strategies);
+
+    const pairHistory: Array<Set<number>> = strategies.map(() => new Set<number>());
+    const byeHistory = new Set<number>();
+    const opponentRecords: Array<Array<{ opponent: number; result: 'win' | 'loss' | 'draw' }>> = strategies.map(
+      () => [],
+    );
+    const roundSummaries: SwissRoundSummary[] = [];
+
+    const totalRounds = Math.max(1, format.rounds ?? Math.ceil(Math.log2(strategies.length)) + 1);
+    const tieBreaker = format.tieBreaker ?? 'total-score';
+
+    const computeTieBreakers = () => {
+      const buchholz = results.map(() => 0);
+      const sonneborn = results.map(() => 0);
+
+      opponentRecords.forEach((records, index) => {
+        let buchholzSum = 0;
+        let sonnebornSum = 0;
+
+        records.forEach(({ opponent, result }) => {
+          if (opponent < 0) return;
+          const opponentScore = results[opponent]?.totalScore ?? 0;
+          buchholzSum += opponentScore;
+
+          if (result === 'win') sonnebornSum += opponentScore;
+          else if (result === 'draw') sonnebornSum += opponentScore / 2;
+        });
+
+        buchholz[index] = buchholzSum;
+        sonneborn[index] = sonnebornSum;
+      });
+
+      return { buchholz, sonneborn };
+    };
+
+    const compareIndices = (
+      aIndex: number,
+      bIndex: number,
+      buchholz: number[],
+      sonneborn: number[],
+    ) => {
+      const scoreDiff = results[bIndex].totalScore - results[aIndex].totalScore;
+      if (scoreDiff !== 0) return scoreDiff;
+
+      if (tieBreaker === 'buchholz') {
+        const diff = buchholz[bIndex] - buchholz[aIndex];
+        if (diff !== 0) return diff;
+      } else if (tieBreaker === 'sonneborn-berger') {
+        const diff = sonneborn[bIndex] - sonneborn[aIndex];
+        if (diff !== 0) return diff;
+      }
+
+      const winDiff = results[bIndex].wins - results[aIndex].wins;
+      if (winDiff !== 0) return winDiff;
+
+      return strategies[aIndex].name.localeCompare(strategies[bIndex].name);
+    };
+
+    for (let round = 0; round < totalRounds; round++) {
+      const { buchholz: preRoundBuchholz, sonneborn: preRoundSonneborn } = computeTieBreakers();
+      const ranked = [...Array(strategies.length).keys()].sort((a, b) =>
+        compareIndices(a, b, preRoundBuchholz, preRoundSonneborn),
+      );
+      const available = [...ranked];
+      const pairings: Array<[number, number]> = [];
+      const roundMatches: SwissRoundMatchSummary[] = [];
+      const roundByes: SwissByeSummary[] = [];
+
+      let byePlayer: number | null = null;
+      if (available.length % 2 !== 0) {
+        const candidate =
+          [...available].reverse().find((index) => !byeHistory.has(index)) ?? available[available.length - 1];
+        available.splice(available.indexOf(candidate), 1);
+        byePlayer = candidate;
+        byeHistory.add(candidate);
+      }
+
+      while (available.length > 0) {
+        const player = available.shift()!;
+        let opponentIdx = available.findIndex((index) => !pairHistory[player].has(index));
+        if (opponentIdx === -1) {
+          opponentIdx = 0;
+        }
+        const opponent = available.splice(opponentIdx, 1)[0];
+        pairings.push([player, opponent]);
+      }
+
+      pairings.forEach(([playerIndex, opponentIndex]) => {
+        const randomSource = seededRandom ?? createRandomSource();
+        const match = this.game.playMatch(
+          strategies[playerIndex],
+          strategies[opponentIndex],
+          roundsPerMatch,
+          errorRate,
+          payoffMatrix,
+          randomSource,
+        );
+
+        results[playerIndex].totalScore += match.player1Score;
+        results[opponentIndex].totalScore += match.player2Score;
+        results[playerIndex].matchesPlayed += 1;
+        results[opponentIndex].matchesPlayed += 1;
+
+        scores[playerIndex].push(match.player1Score);
+        scores[opponentIndex].push(match.player2Score);
+
+        this.updateHeadToHead(
+          headToHeadMaps[playerIndex],
+          strategies[opponentIndex].name,
+          match.player1Score,
+          match.player2Score,
+        );
+        this.updateHeadToHead(
+          headToHeadMaps[opponentIndex],
+          strategies[playerIndex].name,
+          match.player2Score,
+          match.player1Score,
+        );
+
+        let playerResult: 'win' | 'loss' | 'draw' = 'draw';
+        if (match.player1Score > match.player2Score) {
+          results[playerIndex].wins += 1;
+          playerResult = 'win';
+        } else if (match.player2Score > match.player1Score) {
+          results[opponentIndex].wins += 1;
+          playerResult = 'loss';
+        }
+
+        const opponentResult: 'win' | 'loss' | 'draw' =
+          playerResult === 'win' ? 'loss' : playerResult === 'loss' ? 'win' : 'draw';
+
+        opponentRecords[playerIndex].push({ opponent: opponentIndex, result: playerResult });
+        opponentRecords[opponentIndex].push({ opponent: playerIndex, result: opponentResult });
+
+        pairHistory[playerIndex].add(opponentIndex);
+        pairHistory[opponentIndex].add(playerIndex);
+
+        const winner: 'player' | 'opponent' | 'draw' =
+          match.player1Score > match.player2Score
+            ? 'player'
+            : match.player2Score > match.player1Score
+            ? 'opponent'
+            : 'draw';
+
+        roundMatches.push({
+          player: strategies[playerIndex].name,
+          opponent: strategies[opponentIndex].name,
+          playerScore: match.player1Score,
+          opponentScore: match.player2Score,
+          winner,
+        });
+      });
+
+      if (byePlayer !== null) {
+        const byeScore = roundsPerMatch * payoffMatrix.reward;
+        results[byePlayer].totalScore += byeScore;
+        results[byePlayer].matchesPlayed += 1;
+        results[byePlayer].wins += 1;
+        scores[byePlayer].push(byeScore);
+        roundByes.push({ player: strategies[byePlayer].name, awardedScore: byeScore });
+      }
+
+      const { buchholz, sonneborn } = computeTieBreakers();
+      const leaderboardOrder = [...Array(strategies.length).keys()].sort((a, b) =>
+        compareIndices(a, b, buchholz, sonneborn),
+      );
+      const leaderboard: SwissLeaderboardEntry[] = leaderboardOrder.map((index) => ({
+        name: strategies[index].name,
+        totalScore: results[index].totalScore,
+        wins: results[index].wins,
+        matchesPlayed: results[index].matchesPlayed,
+        ...(tieBreaker === 'buchholz'
+          ? { buchholz: buchholz[index] }
+          : tieBreaker === 'sonneborn-berger'
+          ? { sonnebornBerger: sonneborn[index] }
+          : {}),
+      }));
+
+      roundSummaries.push({
+        round: round + 1,
+        matches: roundMatches,
+        byes: roundByes,
+        leaderboard,
+      });
+    }
+
+    const { buchholz, sonneborn } = computeTieBreakers();
+    const referenceResults = results.slice();
+    const resultIndexMap = new Map<TournamentResult, number>();
+    referenceResults.forEach((result, index) => {
+      resultIndexMap.set(result, index);
+    });
+
+    const sortResults = (a: TournamentResult, b: TournamentResult) => {
+      const aIndex = resultIndexMap.get(a);
+      const bIndex = resultIndexMap.get(b);
+      if (aIndex === undefined || bIndex === undefined) {
+        return 0;
+      }
+
+      const scoreDiff = referenceResults[bIndex].totalScore - referenceResults[aIndex].totalScore;
+      if (scoreDiff !== 0) return scoreDiff;
+
+      if (tieBreaker === 'buchholz') {
+        const diff = buchholz[bIndex] - buchholz[aIndex];
+        if (diff !== 0) return diff;
+      } else if (tieBreaker === 'sonneborn-berger') {
+        const diff = sonneborn[bIndex] - sonneborn[aIndex];
+        if (diff !== 0) return diff;
+      } else {
+        const winDiff = referenceResults[bIndex].wins - referenceResults[aIndex].wins;
+        if (winDiff !== 0) return winDiff;
+      }
+
+      const winDiff = referenceResults[bIndex].wins - referenceResults[aIndex].wins;
+      if (winDiff !== 0) return winDiff;
+
+      return strategies[aIndex].name.localeCompare(strategies[bIndex].name);
+    };
+
+    const finalized = this.finalizeResults(results, scores, headToHeadMaps, sortResults);
+
+    return { results: finalized, rounds: roundSummaries };
+  }
+
 
   /**
    * Format results into displayable strings
@@ -248,5 +553,8 @@ export class Tournament {
     return lines;
   }
 }
+
+
+
 
 

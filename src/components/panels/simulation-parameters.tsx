@@ -25,6 +25,7 @@ export type SimulationParametersProps = {
   seedValue: string;
   onSeedToggle: (enabled: boolean) => void;
   onSeedChange: (value: string) => void;
+  activeStrategyCount: number;
   tournamentFormat: TournamentFormat;
   onTournamentFormatChange: (format: TournamentFormat) => void;
 };
@@ -42,6 +43,7 @@ export function SimulationParametersPanel({
   seedValue,
   onSeedToggle,
   onSeedChange,
+  activeStrategyCount,
   tournamentFormat,
   onTournamentFormatChange,
 }: SimulationParametersProps) {
@@ -53,6 +55,25 @@ export function SimulationParametersPanel({
       `T=${payoffMatrix.temptation}, R=${payoffMatrix.reward}, P=${payoffMatrix.punishment}, S=${payoffMatrix.sucker}`,
     [payoffMatrix],
   );
+
+  const suggestedSwissRounds = useMemo(() => {
+    const participants = Math.max(2, activeStrategyCount);
+    return Math.max(1, Math.ceil(Math.log2(participants)) + 1);
+  }, [activeStrategyCount]);
+
+  const swissRounds =
+    tournamentFormat.kind === 'swiss'
+      ? tournamentFormat.rounds ?? suggestedSwissRounds
+      : suggestedSwissRounds;
+
+  const activeTieBreaker =
+    tournamentFormat.kind === 'swiss' ? tournamentFormat.tieBreaker ?? 'total-score' : 'total-score';
+
+  const tieBreakerOptions = [
+    { value: 'total-score', label: 'Total score' },
+    { value: 'buchholz', label: 'Buchholz' },
+    { value: 'sonneborn-berger', label: 'Sonneborn-Berger' },
+  ] as const;
 
   const handleRoundsInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const next = Number(event.target.value);
@@ -87,6 +108,18 @@ export function SimulationParametersPanel({
 
   const handleSeedInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     onSeedChange(event.target.value);
+  };
+
+  const handleSwissRoundsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (tournamentFormat.kind !== 'swiss') return;
+    const next = Number(event.target.value);
+    if (Number.isNaN(next)) return;
+    const clamped = Math.max(1, Math.min(20, Math.floor(next)));
+    onTournamentFormatChange({
+      kind: 'swiss',
+      rounds: clamped,
+      tieBreaker: tournamentFormat.tieBreaker ?? 'total-score',
+    });
   };
 
   return (
@@ -150,10 +183,10 @@ export function SimulationParametersPanel({
           <div>
             <p className="text-sm font-medium text-muted-foreground">Tournament format</p>
             <p className="text-xs text-muted-foreground">
-              Pick how strategies are paired while Swiss-style pairings are in the works.
+              Choose how strategies pair up; Swiss adds round-based pairings with configurable depth.
             </p>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
             <Button
               type="button"
               variant={tournamentFormat.kind === 'single-round-robin' ? 'default' : 'outline'}
@@ -170,9 +203,78 @@ export function SimulationParametersPanel({
             >
               Double round-robin
             </Button>
+            <Button
+              type="button"
+              variant={tournamentFormat.kind === 'swiss' ? 'default' : 'outline'}
+              aria-pressed={tournamentFormat.kind === 'swiss'}
+              onClick={() =>
+                onTournamentFormatChange({
+                  kind: 'swiss',
+                  rounds:
+                    tournamentFormat.kind === 'swiss'
+                      ? tournamentFormat.rounds ?? suggestedSwissRounds
+                      : suggestedSwissRounds,
+                  tieBreaker: activeTieBreaker,
+                })
+              }
+            >
+              Swiss pairing
+            </Button>
           </div>
+          {tournamentFormat.kind === 'swiss' && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <label htmlFor="swiss-rounds" className="text-xs font-medium text-muted-foreground">
+                  Rounds
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    id="swiss-rounds"
+                    type="number"
+                    min={1}
+                    max={20}
+                    step={1}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={swissRounds}
+                    onChange={handleSwissRoundsChange}
+                    className="w-24"
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    Suggested: {suggestedSwissRounds}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground">Tie-breaker</p>
+                <div className="flex flex-wrap gap-2">
+                  {tieBreakerOptions.map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      size="sm"
+                      variant={
+                        activeTieBreaker === option.value
+                          ? 'default'
+                          : 'outline'
+                      }
+                      onClick={() =>
+                        onTournamentFormatChange({
+                          kind: 'swiss',
+                          rounds: swissRounds,
+                          tieBreaker: option.value,
+                        })
+                      }
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground">
-            Swiss controls will land here soon so you can tune rounds and tie-breakers.
+            Adjust Swiss rounds and tie-breakers to experiment with ranking sensitivity.
           </p>
         </div>
       </div>

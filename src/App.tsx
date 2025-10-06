@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Menu, Play, Trophy, X } from "lucide-react";
+import { ChevronDown, Menu, Play, Trophy, X } from "lucide-react";
 
 import { LandingScreen } from "@/components/landing-screen";
 import { SimulationParametersPanel } from "@/components/panels/simulation-parameters";
@@ -27,7 +27,9 @@ import { cn } from "@/lib/utils";
 import {
   DEFAULT_TOURNAMENT_FORMAT,
   type TournamentFormat,
+  type TournamentOutcome,
   type TournamentResult,
+  type SwissRoundSummary,
 } from "@/core/tournament";
 import { simulateTournament } from "@/test-game";
 import { defaultStrategies } from "@/strategies";
@@ -39,6 +41,7 @@ type StrategyType = (typeof defaultStrategies)[number];
 
 type DashboardProps = {
   results: TournamentResult[] | null;
+  swissRounds: SwissRoundSummary[] | null;
   onRunTournament: () => void;
   roundsPerMatch: number;
   onRoundsChange: (value: number) => void;
@@ -68,6 +71,7 @@ type DashboardProps = {
 
 function TournamentDashboard({
   results,
+  swissRounds,
   onRunTournament,
   roundsPerMatch,
   onRoundsChange,
@@ -98,6 +102,7 @@ function TournamentDashboard({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { getSummary } = useTournamentAnalytics(results);
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
+  const [roundsExpanded, setRoundsExpanded] = useState(false);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsVisible(true));
@@ -156,12 +161,32 @@ function TournamentDashboard({
         return 'Single round-robin';
       case 'double-round-robin':
         return 'Double round-robin';
-      case 'swiss':
-        return 'Swiss pairings';
+      case 'swiss': {
+        const participants = Math.max(2, activeStrategyCount || 0);
+        const defaultRounds = Math.max(1, Math.ceil(Math.log2(participants)) + 1);
+        const inferredRounds =
+          results && results.length > 0
+            ? Math.max(...results.map((result) => result.matchesPlayed))
+            : undefined;
+        const roundCount = effectiveFormat.rounds ?? inferredRounds ?? defaultRounds;
+        return `Swiss pairing - ${roundCount} round${roundCount === 1 ? '' : 's'}`;
+      }
       default:
         return 'Custom format';
     }
-  }, [effectiveFormat]);
+  }, [activeStrategyCount, effectiveFormat, results]);
+
+  const swissTieBreaker =
+    effectiveFormat.kind === 'swiss' ? effectiveFormat.tieBreaker ?? 'total-score' : null;
+
+  const formatScore = useCallback(
+    (value: number) => (Number.isInteger(value) ? value.toString() : value.toFixed(2)),
+    [],
+  );
+
+  useEffect(() => {
+    setRoundsExpanded(false);
+  }, [swissRounds?.length ?? 0, effectiveFormat.kind]);
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
@@ -523,6 +548,94 @@ function TournamentDashboard({
               Run the tournament to populate the standings table.
             </p>
           )}
+          {effectiveFormat.kind === 'swiss' && swissRounds && swissRounds.length > 0 && (
+            <div className="rounded-md border border-dashed border-muted p-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="flex w-full items-center justify-between px-2 py-1 text-sm font-semibold"
+                onClick={() => setRoundsExpanded((prev) => !prev)}
+              >
+                <span>Swiss round breakdown</span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    roundsExpanded ? 'rotate-180' : 'rotate-0',
+                  )}
+                />
+              </Button>
+              {roundsExpanded && (
+                <div className="mt-3 space-y-4">
+                  {swissRounds.map((round) => (
+                    <div
+                      key={round.round}
+                      className="space-y-2 rounded-md border border-muted bg-muted/10 p-3"
+                    >
+                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="text-sm font-semibold">Round {round.round}</span>
+                        {round.leaderboard[0] ? (
+                          <span className="text-xs text-muted-foreground">
+                            Leader: {round.leaderboard[0].name} ({formatScore(round.leaderboard[0].totalScore)} pts)
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2">
+                        {round.matches.map((match, index) => (
+                          <div
+                            key={`${round.round}-${match.player}-${match.opponent}-${index}`}
+                            className="flex flex-col gap-1 rounded border border-dashed border-muted bg-background/80 p-2 text-xs sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <span className="font-medium">
+                              {match.player} vs {match.opponent}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {formatScore(match.playerScore)} - {formatScore(match.opponentScore)}{' '}
+                              {match.winner === 'draw'
+                                ? '(draw)'
+                                : `(${match.winner === 'player' ? match.player : match.opponent} win)`}
+                            </span>
+                          </div>
+                        ))}
+                        {round.matches.length === 0 && (
+                          <p className="text-xs text-muted-foreground">No pairings recorded.</p>
+                        )}
+                      </div>
+                      {round.byes.length > 0 && (
+                        <div className="text-xs text-muted-foreground">
+                          Bye:{' '}
+                          {round.byes
+                            .map((bye) => `${bye.player} (+${formatScore(bye.awardedScore)})`)
+                            .join(', ')}
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">
+                          Leaderboard snapshot
+                        </p>
+                        <ul className="space-y-1 text-xs text-muted-foreground">
+                          {round.leaderboard.slice(0, 5).map((entry, index) => {
+                            const tieDetail =
+                              swissTieBreaker === 'buchholz' && typeof entry.buchholz === 'number'
+                                ? ' - Buchholz ' + formatScore(entry.buchholz)
+                                : swissTieBreaker === 'sonneborn-berger' &&
+                                    typeof entry.sonnebornBerger === 'number'
+                                  ? ' - Sonneborn-Berger ' + formatScore(entry.sonnebornBerger)
+                                  : '';
+                            return (
+                              <li key={`${round.round}-leader-${entry.name}`}>
+                                {index + 1}. {entry.name} - {formatScore(entry.totalScore)} pts - {entry.wins} wins
+                                {tieDetail}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </section>
       </CardContent>
       <CardFooter className="flex justify-end">
@@ -576,6 +689,7 @@ function TournamentDashboard({
               seedValue={seedValue}
               onSeedToggle={onSeedToggle}
               onSeedChange={onSeedChange}
+              activeStrategyCount={activeStrategyCount}
               tournamentFormat={tournamentFormat}
               onTournamentFormatChange={onTournamentFormatChange}
             />
@@ -589,7 +703,7 @@ function TournamentDashboard({
 export default function App() {
   const [hasStarted, setHasStarted] = useState(false);
   const [isLandingFading, setIsLandingFading] = useState(false);
-  const [results, setResults] = useState<TournamentResult[] | null>(null);
+  const [tournamentOutcome, setTournamentOutcome] = useState<TournamentOutcome | null>(null);
   const [roundsPerMatch, setRoundsPerMatch] = useState(100);
   const [noiseEnabled, setNoiseEnabled] = useState(false);
   const [noisePercent, setNoisePercent] = useState(10);
@@ -606,6 +720,9 @@ export default function App() {
   const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>(
     []
   );
+
+  const results = tournamentOutcome?.results ?? null;
+  const swissRounds = tournamentOutcome?.swissRounds ?? null;
 
   const strategyOrder = useMemo(
     () => defaultStrategies.map((strategy) => strategy.name),
@@ -636,8 +753,8 @@ export default function App() {
       format: tournamentFormat,
       strategies: activeStrategies,
     });
-    setResults(outcome);
-    setLastRunFormat(tournamentFormat);
+    setTournamentOutcome(outcome);
+    setLastRunFormat(outcome.format);
   }, [
     activeStrategies,
     tournamentFormat,
@@ -713,6 +830,7 @@ export default function App() {
         {hasStarted ? (
           <TournamentDashboard
             results={results}
+            swissRounds={swissRounds}
             onRunTournament={runTournament}
             roundsPerMatch={roundsPerMatch}
             onRoundsChange={setRoundsPerMatch}
