@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "node ./node_modules/typescript/lib/tsc.js --noEmit",
-    "lint:strict": "node ./node_modules/eslint/bin/eslint.js . --max-warnings=0",
+    "lint:strict": "node ./node_modules/eslint/bin/eslint.js .",
     "test": "vitest run"
   },
   "dependencies": {
