@@ -47,19 +47,20 @@ function getCellColor(
   }
 
   const intensity = Math.min(1, Math.abs(value) / maxMagnitude);
+  const baseOpacity = 0.18;
+  const dynamicOpacity = 0.55 * intensity;
+  const alpha = (baseOpacity + dynamicOpacity).toFixed(2);
 
   if (value > 0) {
-    const alpha = (0.25 + 0.5 * intensity).toFixed(2);
     return {
-      background: `rgba(18, 18, 18, ${alpha})`,
-      foreground: intensity > 0.6 ? "var(--background)" : "var(--foreground)",
+      background: `rgba(59, 130, 90, ${alpha})`,
+      foreground: intensity > 0.65 ? "#0f172a" : "var(--foreground)",
     };
   }
 
-  const alpha = (0.35 + 0.4 * intensity).toFixed(2);
   return {
-    background: `rgba(225, 225, 225, ${alpha})`,
-    foreground: intensity > 0.7 ? "var(--foreground)" : "var(--muted-foreground)",
+    background: `rgba(220, 76, 70, ${alpha})`,
+    foreground: intensity > 0.65 ? "#0f172a" : "var(--foreground)",
   };
 }
 
