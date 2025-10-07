@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Menu, Play, Trophy, X } from "lucide-react";
 
 import { LandingScreen } from "@/components/landing-screen";
@@ -203,7 +203,7 @@ function TournamentDashboard({
 
   const handleDragStart = useCallback(
     (
-      event: React.DragEvent<HTMLButtonElement>,
+      event: React.DragEvent<HTMLElement>,
       name: string,
       source: "selected" | "available"
     ) => {
@@ -272,22 +272,22 @@ function TournamentDashboard({
     }, [isSelected]);
 
     const handleToggle = useCallback(() => {
-        setVisible(false);
-        if (exitTimeout.current !== null) {
-          window.clearTimeout(exitTimeout.current);
-        }
-        exitTimeout.current = window.setTimeout(() => {
-          onToggleStrategy(strategy.name);
-          exitTimeout.current = null;
-        }, 120);
-      }, [strategy.name]);
+      setVisible(false);
+      if (exitTimeout.current !== null) {
+        window.clearTimeout(exitTimeout.current);
+      }
+      exitTimeout.current = window.setTimeout(() => {
+        onToggleStrategy(strategy.name);
+        exitTimeout.current = null;
+      }, 120);
+    }, [strategy.name]);
 
-      const handleDragStartLocal = useCallback(
-        (event: React.DragEvent<HTMLButtonElement>) => {
-          handleDragStart(event, strategy.name, isSelected ? "selected" : "available");
-        },
-        [isSelected, strategy.name] // handleDragStart bağımlılığını koru
-      );
+    const handleDragStartLocal = useCallback(
+      (event: React.DragEvent<HTMLDivElement>) => {
+        handleDragStart(event, strategy.name, isSelected ? "selected" : "available");
+      },
+      [isSelected, strategy.name] // handleDragStart bağımlılığını koru
+    );
 
     const handleDragEnd = useCallback(() => {
       if (exitTimeout.current !== null) {
@@ -297,15 +297,27 @@ function TournamentDashboard({
       setVisible(true);
     }, []);
 
+    const handleKeyDown = useCallback(
+      (event: React.KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleToggle();
+        }
+      },
+      [handleToggle],
+    );
+
     return (
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         draggable
         onClick={handleToggle}
+        onKeyDown={handleKeyDown}
         onDragStart={handleDragStartLocal}
         onDragEnd={handleDragEnd}
         className={cn(
-          "flex w-full items-center gap-3 rounded-md border p-2 text-left text-sm transition-opacity duration-200",
+          "flex w-full items-center gap-3 rounded-md border p-2 text-left text-sm transition-opacity duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           visible ? "opacity-100" : "opacity-0",
           isSelected
             ? "border-primary bg-secondary/30 text-foreground"
@@ -320,7 +332,7 @@ function TournamentDashboard({
           <p className="truncate text-sm font-medium leading-none">{strategy.name}</p>
           <StrategyInfoBadge strategy={strategy} />
         </div>
-      </button>
+      </div>
     );
   };
 
@@ -523,11 +535,16 @@ function TournamentDashboard({
                           const isExpanded = result.name === expandedStrategyName;
                           const summary = getSummary(result.name);
 
-                          const baseRow = (
+                          const renderBaseRow = () => (
                             <TableRow
-                              key={result.name}
+                              key={`${result.name}-base`}
                               data-state={isExpanded ? "selected" : undefined}
-                              className={cn("cursor-pointer", isExpanded && "bg-muted")}
+                              className={cn(
+                                "cursor-pointer transition-colors duration-300 ease-out",
+                                isExpanded
+                                  ? "bg-muted/60 shadow-inner"
+                                  : "hover:bg-muted/40"
+                              )}
                               onClick={() => setExpandedStrategyName(result.name)}
                               onFocus={() => setExpandedStrategyName(result.name)}
                               onKeyDown={(event) => {
@@ -539,39 +556,53 @@ function TournamentDashboard({
                               tabIndex={0}
                               aria-selected={isExpanded}
                             >
-                              <TableCell className="font-medium">#{index + 1}</TableCell>
+                              <TableCell className="font-medium transition-colors duration-300">
+                                #{index + 1}
+                              </TableCell>
                               <TableCell
                                 className={cn(
-                                  "text-sm",
+                                  "text-sm transition-colors duration-300",
                                   index === 0 && "font-semibold text-foreground",
+                                  isExpanded && "font-semibold text-foreground"
                                 )}
                               >
                                 {result.name}
                               </TableCell>
-                              <TableCell className="text-right font-mono text-sm">
+                              <TableCell className="text-right font-mono text-sm transition-colors duration-300">
                                 {result.totalScore}
                               </TableCell>
-                              <TableCell className="text-right font-mono text-sm">
+                              <TableCell className="text-right font-mono text-sm transition-colors duration-300">
                                 {result.averageScore.toFixed(2)}
                               </TableCell>
-                              <TableCell className="text-right font-mono text-sm">
+                              <TableCell className="text-right font-mono text-sm transition-colors duration-300">
                                 {result.wins}
                               </TableCell>
                             </TableRow>
                           );
 
-                          if (!isExpanded || !summary) {
-                            return baseRow;
+                          if (!summary) {
+                            return renderBaseRow();
+                          }
+
+                          if (!isExpanded) {
+                            return renderBaseRow();
                           }
 
                           return (
-                            <TableRow key={result.name} data-variant="summary">
-                              <TableCell colSpan={5} className="bg-muted/30 p-0">
-                                <div className="px-4 py-3">
-                                  <StrategySummaryInlineCard summary={summary} rank={index + 1} />
-                                </div>
-                              </TableCell>
-                            </TableRow>
+                            <Fragment key={result.name}>
+                              {renderBaseRow()}
+                              <TableRow
+                                key={`${result.name}-summary`}
+                                data-variant="summary"
+                                className="bg-muted/30"
+                              >
+                                <TableCell colSpan={5} className="p-0">
+                                  <div className="summary-fade px-4 py-3">
+                                    <StrategySummaryInlineCard summary={summary} rank={index + 1} />
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </Fragment>
                           );
                         })}
                       </TableBody>

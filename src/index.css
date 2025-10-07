@@ -65,3 +65,16 @@
 .scrollbar-hidden::-webkit-scrollbar {
   display: none;
 }
+
+.summary-fade {
+  opacity: 0;
+  transform: translateY(-6px);
+  animation: summary-fade-in 220ms ease-out forwards;
+}
+
+@keyframes summary-fade-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
