@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 *.tsbuildinfo
+
+# Codex session notes
+CODEX_REFERENCE.md

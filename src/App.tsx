@@ -34,7 +34,7 @@ import {
 import { simulateTournament } from "@/test-game";
 import { defaultStrategies } from "@/strategies";
 import { StrategyInfoBadge } from "@/components/strategy-info";
-import { StrategySummaryInlineCard } from "@/components/analytics/StrategySummaryInlineCard";
+import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
 import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
 
 type StrategyType = (typeof defaultStrategies)[number];
@@ -103,6 +103,9 @@ function TournamentDashboard({
   const { getSummary } = useTournamentAnalytics(results);
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
   const [roundsExpanded, setRoundsExpanded] = useState(false);
+  const [activeInsightsPanel, setActiveInsightsPanel] = useState<"standings" | "heatmap" | null>(
+    "standings",
+  );
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsVisible(true));
@@ -192,6 +195,12 @@ function TournamentDashboard({
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
+  useEffect(() => {
+    if (activeInsightsPanel !== "standings") {
+      setRoundsExpanded(false);
+    }
+  }, [activeInsightsPanel]);
+
   const handleDragStart = useCallback(
     (
       event: React.DragEvent<HTMLButtonElement>,
@@ -231,6 +240,10 @@ function TournamentDashboard({
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const toggleInsightsPanel = useCallback((panel: "standings" | "heatmap") => {
+    setActiveInsightsPanel((current) => (current === panel ? null : panel));
   }, []);
 
   const StrategyCardItem = ({
@@ -451,14 +464,14 @@ function TournamentDashboard({
           </div>
         </section>
 
-        <section className="space-y-3 rounded-lg border border-dashed border-muted p-4">
+        <section className="space-y-4 rounded-lg border border-dashed border-muted p-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-sm font-semibold uppercase text-muted-foreground">
-                Latest standings
+                Tournament insights
               </h2>
               <p className="text-xs text-muted-foreground">
-                Sorted by cumulative score; average shows match-level performance.
+                Compare leaderboard rankings or dive into head-to-head trends without leaving the dashboard.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -476,168 +489,216 @@ function TournamentDashboard({
             </div>
           </div>
 
-          {results ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-28">Rank</TableHead>
-                  <TableHead>Strategy</TableHead>
-                  <TableHead className="w-24 text-right">Score</TableHead>
-                  <TableHead className="w-24 text-right">Average</TableHead>
-                  <TableHead className="w-20 text-right">Wins</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {results.map((result, index) => {
-                  const isExpanded = result.name === expandedStrategyName;
-                  const summary = getSummary(result.name);
+          <div className="overflow-hidden rounded-md border border-muted">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold transition hover:bg-muted/40"
+              onClick={() => toggleInsightsPanel("standings")}
+              aria-expanded={activeInsightsPanel === "standings"}
+            >
+              <span>Standings overview</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  activeInsightsPanel === "standings" ? "rotate-180" : "rotate-0",
+                )}
+              />
+            </button>
+            {activeInsightsPanel === "standings" && (
+              <div className="space-y-4 border-t border-muted bg-background/60 px-2 py-4 sm:px-4">
+                {results ? (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-28">Rank</TableHead>
+                          <TableHead>Strategy</TableHead>
+                          <TableHead className="w-24 text-right">Score</TableHead>
+                          <TableHead className="w-24 text-right">Average</TableHead>
+                          <TableHead className="w-20 text-right">Wins</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {results.map((result, index) => {
+                          const isExpanded = result.name === expandedStrategyName;
+                          const summary = getSummary(result.name);
 
-                  const baseRow = (
-                    <TableRow
-                      key={result.name}
-                      data-state={isExpanded ? "selected" : undefined}
-                      className={cn("cursor-pointer", isExpanded && "bg-muted")}
-                      onClick={() => setExpandedStrategyName(result.name)}
-                      onFocus={() => setExpandedStrategyName(result.name)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setExpandedStrategyName(result.name);
-                        }
-                      }}
-                      tabIndex={0}
-                      aria-selected={isExpanded}
+                          const baseRow = (
+                            <TableRow
+                              key={result.name}
+                              data-state={isExpanded ? "selected" : undefined}
+                              className={cn("cursor-pointer", isExpanded && "bg-muted")}
+                              onClick={() => setExpandedStrategyName(result.name)}
+                              onFocus={() => setExpandedStrategyName(result.name)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === " ") {
+                                  event.preventDefault();
+                                  setExpandedStrategyName(result.name);
+                                }
+                              }}
+                              tabIndex={0}
+                              aria-selected={isExpanded}
+                            >
+                              <TableCell className="font-medium">#{index + 1}</TableCell>
+                              <TableCell
+                                className={cn(
+                                  "text-sm",
+                                  index === 0 && "font-semibold text-foreground",
+                                )}
+                              >
+                                {result.name}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {result.totalScore}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {result.averageScore.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-sm">
+                                {result.wins}
+                              </TableCell>
+                            </TableRow>
+                          );
+
+                          if (!isExpanded || !summary) {
+                            return baseRow;
+                          }
+
+                          return (
+                            <TableRow key={result.name} data-variant="summary">
+                              <TableCell colSpan={5} className="bg-muted/30 p-0">
+                                <div className="px-4 py-3">
+                                  <StrategySummaryInlineCard summary={summary} rank={index + 1} />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Run a tournament to populate the standings table.
+                  </p>
+                )}
+
+                {effectiveFormat.kind === "swiss" && swissRounds && swissRounds.length > 0 && (
+                  <div className="rounded-md border border-dashed border-muted p-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="flex w-full items-center justify-between px-2 py-1 text-sm font-semibold"
+                      onClick={() => setRoundsExpanded((prev) => !prev)}
                     >
-                      <TableCell className="font-medium">#{index + 1}</TableCell>
-                      <TableCell
+                      <span>Swiss round breakdown</span>
+                      <ChevronDown
                         className={cn(
-                          "text-sm",
-                          index === 0 && "font-semibold text-foreground"
+                          "h-4 w-4 transition-transform",
+                          roundsExpanded ? "rotate-180" : "rotate-0",
                         )}
-                      >
-                        {result.name}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {result.totalScore}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {result.averageScore.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {result.wins}
-                      </TableCell>
-                    </TableRow>
-                  );
-
-                  if (!isExpanded || !summary) {
-                    return baseRow;
-                  }
-
-                  return (
-                    <TableRow key={result.name} data-variant="summary">
-                      <TableCell colSpan={5} className="bg-muted/30 p-0">
-                        <div className="px-4 py-3">
-                          <StrategySummaryInlineCard summary={summary} rank={index + 1} />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Run the tournament to populate the standings table.
-            </p>
-          )}
-          {effectiveFormat.kind === 'swiss' && swissRounds && swissRounds.length > 0 && (
-            <div className="rounded-md border border-dashed border-muted p-3">
-              <Button
-                type="button"
-                variant="ghost"
-                className="flex w-full items-center justify-between px-2 py-1 text-sm font-semibold"
-                onClick={() => setRoundsExpanded((prev) => !prev)}
-              >
-                <span>Swiss round breakdown</span>
-                <ChevronDown
-                  className={cn(
-                    'h-4 w-4 transition-transform',
-                    roundsExpanded ? 'rotate-180' : 'rotate-0',
-                  )}
-                />
-              </Button>
-              {roundsExpanded && (
-                <div className="mt-3 space-y-4">
-                  {swissRounds.map((round) => (
-                    <div
-                      key={round.round}
-                      className="space-y-2 rounded-md border border-muted bg-muted/10 p-3"
-                    >
-                      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                        <span className="text-sm font-semibold">Round {round.round}</span>
-                        {round.leaderboard[0] ? (
-                          <span className="text-xs text-muted-foreground">
-                            Leader: {round.leaderboard[0].name} ({formatScore(round.leaderboard[0].totalScore)} pts)
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="space-y-2">
-                        {round.matches.map((match, index) => (
+                      />
+                    </Button>
+                    {roundsExpanded && (
+                      <div className="mt-3 space-y-4">
+                        {swissRounds.map((round) => (
                           <div
-                            key={`${round.round}-${match.player}-${match.opponent}-${index}`}
-                            className="flex flex-col gap-1 rounded border border-dashed border-muted bg-background/80 p-2 text-xs sm:flex-row sm:items-center sm:justify-between"
+                            key={round.round}
+                            className="space-y-2 rounded-md border border-muted bg-muted/10 p-3"
                           >
-                            <span className="font-medium">
-                              {match.player} vs {match.opponent}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {formatScore(match.playerScore)} - {formatScore(match.opponentScore)}{' '}
-                              {match.winner === 'draw'
-                                ? '(draw)'
-                                : `(${match.winner === 'player' ? match.player : match.opponent} win)`}
-                            </span>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                              <span className="text-sm font-semibold">Round {round.round}</span>
+                              {round.leaderboard[0] ? (
+                                <span className="text-xs text-muted-foreground">
+                                  Leader: {round.leaderboard[0].name} ({formatScore(round.leaderboard[0].totalScore)} pts)
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="space-y-2">
+                              {round.matches.map((match, index) => (
+                                <div
+                                  key={`${round.round}-${match.player}-${match.opponent}-${index}`}
+                                  className="flex flex-col gap-1 rounded border border-dashed border-muted bg-background/80 p-2 text-xs sm:flex-row sm:items-center sm:justify-between"
+                                >
+                                  <span className="font-medium">
+                                    {match.player} vs {match.opponent}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {formatScore(match.playerScore)} - {formatScore(match.opponentScore)}{" "}
+                                    {match.winner === "draw"
+                                      ? "(draw)"
+                                      : `(${match.winner === "player" ? match.player : match.opponent} win)`}
+                                  </span>
+                                </div>
+                              ))}
+                              {round.matches.length === 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                  No pairings were recorded for this round.
+                                </p>
+                              )}
+                            </div>
+                            {round.byes.length > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                Bye:{" "}
+                                {round.byes
+                                  .map((bye) => `${bye.player} (+${formatScore(bye.awardedScore)})`)
+                                  .join(", ")}
+                              </div>
+                            )}
+                            <div className="space-y-1">
+                              <p className="text-xs font-semibold uppercase text-muted-foreground">
+                                Top five snapshot
+                              </p>
+                              <ul className="space-y-1 text-xs text-muted-foreground">
+                                {round.leaderboard.slice(0, 5).map((entry, index) => {
+                                  const tieDetail =
+                                    swissTieBreaker === "buchholz" && typeof entry.buchholz === "number"
+                                      ? " - Buchholz " + formatScore(entry.buchholz)
+                                      : swissTieBreaker === "sonneborn-berger" &&
+                                        typeof entry.sonnebornBerger === "number"
+                                      ? " - Sonneborn-Berger " + formatScore(entry.sonnebornBerger)
+                                      : "";
+                                  return (
+                                    <li key={`${round.round}-leader-${entry.name}`}>
+                                      {index + 1}. {entry.name} - {formatScore(entry.totalScore)} pts - {entry.wins} wins
+                                      {tieDetail}
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            </div>
                           </div>
                         ))}
-                        {round.matches.length === 0 && (
-                          <p className="text-xs text-muted-foreground">No pairings recorded.</p>
-                        )}
                       </div>
-                      {round.byes.length > 0 && (
-                        <div className="text-xs text-muted-foreground">
-                          Bye:{' '}
-                          {round.byes
-                            .map((bye) => `${bye.player} (+${formatScore(bye.awardedScore)})`)
-                            .join(', ')}
-                        </div>
-                      )}
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold uppercase text-muted-foreground">
-                          Leaderboard snapshot
-                        </p>
-                        <ul className="space-y-1 text-xs text-muted-foreground">
-                          {round.leaderboard.slice(0, 5).map((entry, index) => {
-                            const tieDetail =
-                              swissTieBreaker === 'buchholz' && typeof entry.buchholz === 'number'
-                                ? ' - Buchholz ' + formatScore(entry.buchholz)
-                                : swissTieBreaker === 'sonneborn-berger' &&
-                                    typeof entry.sonnebornBerger === 'number'
-                                  ? ' - Sonneborn-Berger ' + formatScore(entry.sonnebornBerger)
-                                  : '';
-                            return (
-                              <li key={`${round.round}-leader-${entry.name}`}>
-                                {index + 1}. {entry.name} - {formatScore(entry.totalScore)} pts - {entry.wins} wins
-                                {tieDetail}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              className={cn(
+                "flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold transition hover:bg-muted/40",
+                activeInsightsPanel === "heatmap" && "border-t border-muted",
               )}
-            </div>
-          )}
+              onClick={() => toggleInsightsPanel("heatmap")}
+              aria-expanded={activeInsightsPanel === "heatmap"}
+            >
+              <span>H2H heat map</span>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform",
+                  activeInsightsPanel === "heatmap" ? "rotate-180" : "rotate-0",
+                )}
+              />
+            </button>
+            {activeInsightsPanel === "heatmap" && (
+              <div className="border-t border-muted bg-background/60 px-2 py-4 sm:px-4">
+                <HeadToHeadHeatMap results={results} />
+              </div>
+            )}
+          </div>
         </section>
       </CardContent>
       <CardFooter className="flex justify-end">
@@ -866,3 +927,5 @@ export default function App() {
     </div>
   );
 }
+
+
