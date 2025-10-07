@@ -1,7 +1,7 @@
 import type { Strategy } from '../core/types';
 
 export const pavlov: Strategy = {
-  name: 'Pavlov (Win-Stay)',
+  name: 'Pavlov',
   description: 'Repeats last move if it yielded a high payoff; otherwise switches.',
   play: (history, round) => {
     if (round === 0) return 'COOPERATE';

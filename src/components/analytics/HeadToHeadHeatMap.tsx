@@ -6,6 +6,13 @@ import {
   buildHeadToHeadMatrix,
   type HeadToHeadMatrixCell,
 } from "@/lib/analytics/headToHeadMatrix";
+import {
+  Tooltip,
+  TooltipArrow,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type HeadToHeadHeatMapProps = {
   results: TournamentResult[] | null;
@@ -118,8 +125,9 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
   }
 
   return (
-    <div className={cn("overflow-x-auto", className)}>
-      <table
+    <TooltipProvider delayDuration={200}>
+      <div className={cn("overflow-x-auto", className)}>
+        <table
         className="min-w-full border-separate text-xs sm:text-sm"
         style={{ borderSpacing: 0, border: "none" }}
       >
@@ -137,7 +145,7 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
                 className="px-0 py-0 text-center font-semibold text-muted-foreground"
                 style={cellDimensions}
               >
-                <div className="flex h-[72px] w-full items-end justify-center break-words px-1 text-[11px] font-medium leading-tight">
+                <div className="flex h-[68px] w-full items-end justify-center break-words px-1 pb-1 text-[11px] font-medium leading-tight">
                   {strategy}
                 </div>
               </th>
@@ -175,25 +183,45 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
                 const tooltip = buildTooltip(cell);
 
                 return (
-                  <td key={cellKey} className="p-0 text-center font-semibold" style={cellDimensions}>
-                    <div
-                      title={tooltip}
-                      className="flex h-full w-full items-center justify-center transition-colors"
-                      style={{
-                        height: `${CELL_SIZE}px`,
-                        backgroundColor: background,
-                        color: foreground,
-                      }}
-                    >
-                      {formatDifferential(value)}
-                    </div>
-                  </td>
+                    <td key={cellKey} className="p-0 text-center font-semibold" style={cellDimensions}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="flex h-full w-full items-center justify-center transition-colors"
+                            style={{
+                              height: `${CELL_SIZE}px`,
+                              backgroundColor: background,
+                              color: foreground,
+                            }}
+                          >
+                            {formatDifferential(value)}
+                          </div>
+                        </TooltipTrigger>
+                        {tooltip ? (
+                          <TooltipContent className="max-w-xs">
+                            <p className="font-medium">{cell.strategy}</p>
+                            <p className="text-xs text-muted-foreground">vs {cell.opponent}</p>
+                            <div className="mt-2 space-y-1 text-xs leading-tight text-foreground">
+                              <p>{value ? `Score differential: ${numberFormatter.format(value)}` : "Score differential: 0"}</p>
+                              <p>
+                                Record: {cell.wins}-{cell.draws}-{cell.losses} ({numberFormatter.format(cell.averageScore)} avg pts)
+                              </p>
+                              <p>
+                                Total score: {cell.playerScore} - {cell.opponentScore}
+                              </p>
+                            </div>
+                            <TooltipArrow width={12} height={6} />
+                          </TooltipContent>
+                        ) : null}
+                      </Tooltip>
+                    </td>
                 );
               })}
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
