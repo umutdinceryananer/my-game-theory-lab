@@ -26,6 +26,9 @@ const CELL_SIZE = 56;
 const cellDimensions = {
   width: `${CELL_SIZE}px`,
   minWidth: `${CELL_SIZE}px`,
+  border: "none",
+  padding: 0,
+  height: `${CELL_SIZE}px`,
 };
 
 function formatDifferential(value: number | null): string {
@@ -115,12 +118,15 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
 
   return (
     <div className={cn("overflow-x-auto", className)}>
-      <table className="min-w-full border-collapse text-xs sm:text-sm">
+      <table
+        className="min-w-full border-separate text-xs sm:text-sm"
+        style={{ borderSpacing: 0, border: "none" }}
+      >
         <thead>
           <tr>
             <th
               className="sticky left-0 z-10 bg-background px-3 py-2 text-left font-semibold text-muted-foreground"
-              style={{ minWidth: "11rem" }}
+              style={{ minWidth: "11rem", border: "none" }}
             >
               Strategy
             </th>
@@ -130,7 +136,7 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
                 className="px-0 py-0 text-center font-semibold text-muted-foreground"
                 style={cellDimensions}
               >
-                <div className="mx-auto flex h-[72px] w-full items-end justify-center break-words px-1 text-[11px] font-medium leading-tight">
+                <div className="flex h-[72px] w-full items-end justify-center break-words px-1 text-[11px] font-medium leading-tight">
                   {strategy}
                 </div>
               </th>
@@ -139,10 +145,10 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
         </thead>
         <tbody>
           {strategies.map((rowStrategy, rowIndex) => (
-            <tr key={rowStrategy} className="border-t border-muted/50">
+            <tr key={rowStrategy}>
               <th
                 className="sticky left-0 z-10 bg-background px-3 py-2 text-left font-medium"
-                style={{ minWidth: "11rem" }}
+                style={{ minWidth: "11rem", border: "none" }}
               >
                 {rowStrategy}
               </th>
@@ -153,10 +159,10 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
                   return (
                     <td key={cellKey} className="p-0 text-center text-muted-foreground" style={cellDimensions}>
                       <div
-                        className="mx-auto flex items-center justify-center text-base"
-                        style={{ width: `${CELL_SIZE}px`, height: `${CELL_SIZE}px` }}
+                        className="flex h-full w-full items-center justify-center text-base"
+                        style={{ height: `${CELL_SIZE}px` }}
                       >
-                        —
+                        -
                       </div>
                     </td>
                   );
@@ -171,9 +177,8 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
                   <td key={cellKey} className="p-0 text-center font-semibold" style={cellDimensions}>
                     <div
                       title={tooltip}
-                      className="mx-auto flex items-center justify-center rounded-sm transition-colors"
+                      className="flex h-full w-full items-center justify-center transition-colors"
                       style={{
-                        width: `${CELL_SIZE}px`,
                         height: `${CELL_SIZE}px`,
                         backgroundColor: background,
                         color: foreground,
