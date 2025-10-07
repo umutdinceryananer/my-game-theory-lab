@@ -239,22 +239,64 @@ export function HeadToHeadHeatMap({ results, className }: HeadToHeadHeatMapProps
                         </div>
                       </TooltipTrigger>
                       {tooltip ? (
-                        <TooltipContent className="max-w-xs">
-                          <p className="font-medium">{cell.strategy}</p>
-                          <p className="text-xs text-muted-foreground">vs {cell.opponent}</p>
-                          <div className="mt-2 space-y-1 text-xs leading-tight text-foreground">
-                            <p>
-                              {value
-                                ? `Score differential: ${numberFormatter.format(value)}`
-                                : "Score differential: 0"}
-                            </p>
-                            <p>
-                              Record: {cell.wins}-{cell.draws}-{cell.losses} (
-                              {numberFormatter.format(cell.averageScore)} avg pts)
-                            </p>
-                            <p>
-                              Total score: {cell.playerScore} - {cell.opponentScore}
-                            </p>
+                        <TooltipContent className="max-w-sm p-0">
+                          <div className="min-w-[220px]">
+                            <div className="flex items-start justify-between gap-3 border-b border-muted px-3 py-2">
+                              <div className="space-y-1">
+                                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                                  Matchup
+                                </p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {cell.strategy}
+                                </p>
+                                <p className="text-xs text-muted-foreground">vs {cell.opponent}</p>
+                              </div>
+                              <div
+                                className={cn(
+                                  "rounded-md border px-2 py-1 text-xs font-semibold",
+                                  value === null || value === 0
+                                    ? "border-muted bg-muted text-muted-foreground"
+                                    : value > 0
+                                    ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-400"
+                                    : "border-rose-500/40 bg-rose-500/15 text-rose-400",
+                                )}
+                              >
+                                {formatDifferential(value)}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 px-3 py-2 text-[11px] leading-tight">
+                              <div className="space-y-1">
+                                <p className="text-muted-foreground uppercase tracking-wide">
+                                  Record
+                                </p>
+                                <p className="text-sm font-medium text-foreground">
+                                  {cell.wins}-{cell.draws}-{cell.losses}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-muted-foreground uppercase tracking-wide">
+                                  Avg points
+                                </p>
+                                <p className="text-sm font-medium text-foreground">
+                                  {numberFormatter.format(cell.averageScore)}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-muted-foreground uppercase tracking-wide">
+                                  Total score
+                                </p>
+                                <p className="text-sm font-medium text-foreground">
+                                  {cell.playerScore} - {cell.opponentScore}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-muted-foreground uppercase tracking-wide">
+                                  Matches
+                                </p>
+                                <p className="text-sm font-medium text-foreground">{cell.matches}</p>
+                              </div>
+                            </div>
                           </div>
                           <TooltipArrow width={12} height={6} />
                         </TooltipContent>

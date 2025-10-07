@@ -36,6 +36,7 @@ import { defaultStrategies } from "@/strategies";
 import { StrategyInfoBadge } from "@/components/strategy-info";
 import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
 import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type StrategyType = (typeof defaultStrategies)[number];
 
@@ -103,7 +104,7 @@ function TournamentDashboard({
   const { getSummary } = useTournamentAnalytics(results);
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
   const [roundsExpanded, setRoundsExpanded] = useState(false);
-  const [activeInsightsPanel, setActiveInsightsPanel] = useState<"standings" | "heatmap" | null>(
+  const [activeInsightsPanel, setActiveInsightsPanel] = useState<"standings" | "heatmap">(
     "standings",
   );
 
@@ -240,10 +241,6 @@ function TournamentDashboard({
   const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
-  }, []);
-
-  const toggleInsightsPanel = useCallback((panel: "standings" | "heatmap") => {
-    setActiveInsightsPanel((current) => (current === panel ? null : panel));
   }, []);
 
   const StrategyCardItem = ({
@@ -501,23 +498,22 @@ function TournamentDashboard({
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-md border border-muted">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold transition hover:bg-muted/40"
-              onClick={() => toggleInsightsPanel("standings")}
-              aria-expanded={activeInsightsPanel === "standings"}
-            >
-              <span>Standings overview</span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 transition-transform",
-                  activeInsightsPanel === "standings" ? "rotate-180" : "rotate-0",
-                )}
-              />
-            </button>
-            {activeInsightsPanel === "standings" && (
-              <div className="space-y-4 border-t border-muted bg-background/60 px-2 py-4 sm:px-4">
+          <Tabs
+            value={activeInsightsPanel}
+            onValueChange={(value) => setActiveInsightsPanel(value as "standings" | "heatmap")}
+            className="w-full"
+          >
+            <TabsList className="mb-4 w-full max-w-full justify-start gap-2 overflow-x-auto">
+              <TabsTrigger value="standings" className="whitespace-nowrap px-4">
+                Standings overview
+              </TabsTrigger>
+              <TabsTrigger value="heatmap" className="whitespace-nowrap px-4">
+                H2H heat map
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="standings">
+              <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
                 {results ? (
                   <div className="overflow-x-auto">
                     <Table>
@@ -677,7 +673,7 @@ function TournamentDashboard({
                               </div>
                             )}
                             <div className="space-y-1">
-                              <p className="text-xs font-semibold uppercase text-muted-foreground">
+                              <p className="text-xs text-muted-foreground uppercase font-semibold">
                                 Top five snapshot
                               </p>
                               <ul className="space-y-1 text-xs text-muted-foreground">
@@ -705,31 +701,13 @@ function TournamentDashboard({
                   </div>
                 )}
               </div>
-            )}
-
-            <button
-              type="button"
-              className={cn(
-                "flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold transition hover:bg-muted/40",
-                activeInsightsPanel === "heatmap" && "border-t border-muted",
-              )}
-              onClick={() => toggleInsightsPanel("heatmap")}
-              aria-expanded={activeInsightsPanel === "heatmap"}
-            >
-              <span>H2H heat map</span>
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 transition-transform",
-                  activeInsightsPanel === "heatmap" ? "rotate-180" : "rotate-0",
-                )}
-              />
-            </button>
-            {activeInsightsPanel === "heatmap" && (
-              <div className="border-t border-muted bg-background/60 px-2 py-4 sm:px-4">
+            </TabsContent>
+            <TabsContent value="heatmap">
+              <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
                 <HeadToHeadHeatMap results={results} />
               </div>
-            )}
-          </div>
+            </TabsContent>
+          </Tabs>
         </section>
       </CardContent>
       <CardFooter className="flex justify-end">
@@ -958,5 +936,6 @@ export default function App() {
     </div>
   );
 }
+
 
 
