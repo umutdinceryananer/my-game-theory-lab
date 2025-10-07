@@ -326,7 +326,9 @@ function TournamentDashboard({
           {strategy.name.slice(0, 2).toUpperCase()}
         </span>
         <div className="flex flex-1 items-center justify-between gap-3">
-          <p className="truncate text-sm font-medium leading-none">{strategy.name}</p>
+          <p className="max-w-[75%] break-words text-left text-sm font-medium leading-tight">
+            {strategy.name}
+          </p>
           <StrategyInfoBadge strategy={strategy} />
         </div>
       </div>
