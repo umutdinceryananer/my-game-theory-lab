@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Menu, Play, Trophy, X } from "lucide-react";
+import { ChevronDown, Dna, Menu, Play, Trophy, X } from "lucide-react";
 
 import { LandingScreen } from "@/components/landing-screen";
 import { SimulationParametersPanel } from "@/components/panels/simulation-parameters";
@@ -33,6 +33,7 @@ import {
 } from "@/core/tournament";
 import { simulateTournament } from "@/test-game";
 import { defaultStrategies } from "@/strategies";
+import { geneticStrategyConfigs } from "@/strategies/genetic";
 import { StrategyInfoBadge } from "@/components/strategy-info";
 import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
 import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
@@ -304,6 +305,8 @@ function TournamentDashboard({
       [handleToggle],
     );
 
+    const geneticConfig = geneticStrategyConfigs[strategy.name];
+
     return (
       <div
         role="button"
@@ -322,14 +325,23 @@ function TournamentDashboard({
         )}
         aria-pressed={isSelected}
       >
-        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
-          {strategy.name.slice(0, 2).toUpperCase()}
-        </span>
-        <div className="flex flex-1 items-center justify-between gap-3">
-          <p className="max-w-[75%] break-words text-left text-sm font-medium leading-tight">
+        <div className="flex flex-1 items-center gap-3">
+          <StrategyInfoBadge
+            strategy={strategy}
+            triggerVariant="ghost"
+            triggerSize="icon"
+            triggerClassName="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            triggerAriaLabel={`Strategy details for ${strategy.name}`}
+          >
+            {geneticConfig ? (
+              <Dna className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <span className="font-semibold">{strategy.name.slice(0, 2).toUpperCase()}</span>
+            )}
+          </StrategyInfoBadge>
+          <p className="max-w-[16rem] truncate text-left text-sm font-medium leading-tight md:max-w-xs">
             {strategy.name}
           </p>
-          <StrategyInfoBadge strategy={strategy} />
         </div>
       </div>
     );

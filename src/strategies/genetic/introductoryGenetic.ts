@@ -1,9 +1,10 @@
 import type { GeneticStrategyConfig } from './genome';
 import { createGeneticStrategy } from './createGeneticStrategy';
 
-const introductoryGenome: GeneticStrategyConfig = {
+const INTRODUCTORY_GENETIC_CONFIG: GeneticStrategyConfig = {
   name: 'Genetic Adaptive Starter',
-  description: 'Begins cooperatively, punishes brief defections, and resets after mutual cooperation.',
+  description:
+    'Genome opens with cooperation, punishes single-step defections, sustains retaliation if abuse continues, and returns to cooperation once trust is rebuilt.',
   mutationRate: 0.08,
   crossoverRate: 0.6,
   genome: [
@@ -43,5 +44,5 @@ const introductoryGenome: GeneticStrategyConfig = {
   ],
 };
 
-export const introductoryGenetic = createGeneticStrategy(introductoryGenome);
-export const introductoryGeneticConfig = introductoryGenome;
+export const introductoryGenetic = createGeneticStrategy(INTRODUCTORY_GENETIC_CONFIG);
+export const introductoryGeneticConfig = INTRODUCTORY_GENETIC_CONFIG;
