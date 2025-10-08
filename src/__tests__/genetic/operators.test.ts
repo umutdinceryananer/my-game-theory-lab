@@ -2,16 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Genome } from '@/strategies/genetic';
 import { mutateGenome, singlePointCrossover } from '@/strategies/genetic/operators';
-
-function createSequenceRandom(sequence: number[], fallback = 0.5): () => number {
-  let index = 0;
-  const defaultValue = sequence.length > 0 ? sequence[sequence.length - 1] : fallback;
-  return () => {
-    const value = sequence[index] ?? defaultValue;
-    index += 1;
-    return value;
-  };
-}
+import { createSequenceRandom } from './utils/random';
 
 describe('mutateGenome', () => {
   it('returns a new genome instance', () => {
