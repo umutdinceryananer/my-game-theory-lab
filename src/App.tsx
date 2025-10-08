@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix } from "@/core/types";
+import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix, type Strategy } from "@/core/types";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_TOURNAMENT_FORMAT,
@@ -32,16 +32,22 @@ import {
   type SwissRoundSummary,
 } from "@/core/tournament";
 import { simulateTournament } from "@/test-game";
-import { defaultStrategies } from "@/strategies";
-import { geneticStrategyConfigs } from "@/strategies/genetic";
+import { baseStrategies } from "@/strategies";
 import { StrategyInfoBadge } from "@/components/strategy-info";
 import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
 import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { GeneticStrategyConfig } from "@/strategies/genetic";
+import { createGeneticStrategy, geneticStrategyConfigs } from "@/strategies/genetic";
+import { cloneGeneticConfigMap } from "@/strategies/genetic/utils";
+import { GeneticStrategyEditor } from "@/components/genetic/genetic-strategy-editor";
 
-type StrategyType = (typeof defaultStrategies)[number];
+type StrategyType = Strategy;
 
 type DashboardProps = {
+  availableStrategies: StrategyType[];
+  geneticConfigs: Record<string, GeneticStrategyConfig>;
+  onGeneticConfigsChange: (nextConfigs: Record<string, GeneticStrategyConfig>) => void;
   results: TournamentResult[] | null;
   swissRounds: SwissRoundSummary[] | null;
   onRunTournament: () => void;
@@ -71,7 +77,24 @@ type DashboardProps = {
   activeStrategyCount: number;
 };
 
+type GeneticConfigMap = Record<string, GeneticStrategyConfig>;
+
+function buildStrategies(base: StrategyType[], configs: GeneticConfigMap): StrategyType[] {
+  const geneticList = Object.values(configs).map((config) => createGeneticStrategy(config));
+  return [...base, ...geneticList];
+}
+
+function buildStrategyMap(strategies: StrategyType[]): Map<string, StrategyType> {
+  return strategies.reduce<Map<string, StrategyType>>((map, strategy) => {
+    map.set(strategy.name, strategy);
+    return map;
+  }, new Map());
+}
+
 function TournamentDashboard({
+  availableStrategies,
+  geneticConfigs,
+  onGeneticConfigsChange,
   results,
   swissRounds,
   onRunTournament,
@@ -102,6 +125,7 @@ function TournamentDashboard({
 }: DashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [geneticEditorOpen, setGeneticEditorOpen] = useState(false);
   const { getSummary } = useTournamentAnalytics(results);
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
   const [roundsExpanded, setRoundsExpanded] = useState(false);
@@ -131,7 +155,7 @@ function TournamentDashboard({
 
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
-    return defaultStrategies.filter((strategy) => {
+    return availableStrategies.filter((strategy) => {
       if (!selectedStrategyNames.includes(strategy.name)) return false;
       if (!query) return true;
       return (
@@ -139,11 +163,11 @@ function TournamentDashboard({
         strategy.description.toLowerCase().includes(query)
       );
     });
-  }, [selectedStrategyNames, strategySearch]);
+  }, [availableStrategies, selectedStrategyNames, strategySearch]);
 
   const filteredAvailableStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
-    return defaultStrategies.filter((strategy) => {
+    return availableStrategies.filter((strategy) => {
       if (selectedStrategyNames.includes(strategy.name)) return false;
       if (!query) return true;
       return (
@@ -151,7 +175,7 @@ function TournamentDashboard({
         strategy.description.toLowerCase().includes(query)
       );
     });
-  }, [selectedStrategyNames, strategySearch]);
+  }, [availableStrategies, selectedStrategyNames, strategySearch]);
 
   const totalMatches =
     filteredSelectedStrategies.length + filteredAvailableStrategies.length;
@@ -305,7 +329,7 @@ function TournamentDashboard({
       [handleToggle],
     );
 
-    const geneticConfig = geneticStrategyConfigs[strategy.name];
+    const geneticConfig = geneticConfigs[strategy.name];
 
     return (
       <div
@@ -328,6 +352,7 @@ function TournamentDashboard({
         <div className="flex flex-1 items-center gap-3">
           <StrategyInfoBadge
             strategy={strategy}
+            geneticConfig={geneticConfig}
             triggerVariant="ghost"
             triggerSize="icon"
             triggerClassName="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -348,13 +373,14 @@ function TournamentDashboard({
   };
 
   return (
-    <Card
-      className={cn(
-        "transition-opacity duration-500",
-        isVisible ? "opacity-100" : "opacity-0"
-      )}
-    >
-      <CardHeader className="space-y-4">
+    <>
+      <Card
+        className={cn(
+          "transition-opacity duration-500",
+          isVisible ? "opacity-100" : "opacity-0"
+        )}
+      >
+        <CardHeader className="space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
             <CardTitle>Game Theory Lab</CardTitle>
@@ -374,7 +400,7 @@ function TournamentDashboard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-6">
+        <CardContent className="space-y-6">
         <section className="space-y-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -385,17 +411,28 @@ function TournamentDashboard({
                 Pick the strategies that should participate in the tournament.
               </p>
             </div>
-            <Input
-              value={strategySearch}
-              onChange={(event) => onStrategySearch(event.target.value)}
-              placeholder="Search strategies..."
-              className="sm:w-64"
-              aria-label="Search strategies"
-            />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+              <Input
+                value={strategySearch}
+                onChange={(event) => onStrategySearch(event.target.value)}
+                placeholder="Search strategies..."
+                className="sm:w-64"
+                aria-label="Search strategies"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => setGeneticEditorOpen(true)}
+              >
+                <Dna className="h-4 w-4" aria-hidden="true" />
+                Genetic editor
+              </Button>
+            </div>
           </div>
           <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <span>
-              Selected {selectedStrategyNames.length} / {defaultStrategies.length}
+              Selected {selectedStrategyNames.length} / {availableStrategies.length}
             </span>
             <div className="flex flex-wrap items-center gap-2">
               <span>
@@ -405,7 +442,7 @@ function TournamentDashboard({
                 variant="ghost"
                 size="sm"
                 onClick={onSelectAll}
-                disabled={selectedStrategyNames.length === defaultStrategies.length}
+                disabled={selectedStrategyNames.length === availableStrategies.length}
               >
                 Select all
               </Button>
@@ -470,7 +507,7 @@ function TournamentDashboard({
                 <p className="text-sm text-muted-foreground">
                   {hasSearch
                     ? "No available strategies match your search."
-                    : selectedStrategyNames.length === defaultStrategies.length
+                    : selectedStrategyNames.length === availableStrategies.length
                     ? "All strategies are currently selected."
                     : "No additional strategies available."}
                 </p>
@@ -723,19 +760,33 @@ function TournamentDashboard({
             </TabsContent>
           </Tabs>
         </section>
-      </CardContent>
-      <CardFooter className="flex justify-end">
-        <Button
-          size="lg"
-          onClick={onRunTournament}
-          className="w-full sm:w-auto"
-          disabled={activeStrategyCount < 2}
-        >
-          <Play className="mr-2 h-4 w-4" />
-          Run Tournament
-        </Button>
-      </CardFooter>
+        </CardContent>
+        <CardFooter className="flex justify-end">
+          <Button
+            size="lg"
+            onClick={onRunTournament}
+            className="w-full sm:w-auto"
+            disabled={activeStrategyCount < 2}
+          >
+            <Play className="mr-2 h-4 w-4" />
+            Run Tournament
+          </Button>
+        </CardFooter>
+      </Card>
 
+      {geneticEditorOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200">
+          <div
+            className="absolute inset-0 bg-black/60 transition-opacity duration-200"
+            onClick={() => setGeneticEditorOpen(false)}
+          />
+          <GeneticStrategyEditor
+            configs={geneticConfigs}
+            onClose={() => setGeneticEditorOpen(false)}
+            onSave={onGeneticConfigsChange}
+          />
+        </div>
+      )}
 
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200"
@@ -782,7 +833,7 @@ function TournamentDashboard({
           </div>
         </Card>
       </div>
-    </Card>
+    </>
   );
 }
 
@@ -803,24 +854,49 @@ export default function App() {
   );
   const [lastRunFormat, setLastRunFormat] = useState<TournamentFormat | null>(null);
   const [strategySearch, setStrategySearch] = useState("");
-  const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>(
-    []
+  const [geneticConfigs, setGeneticConfigs] = useState<GeneticConfigMap>(() =>
+    cloneGeneticConfigMap(geneticStrategyConfigs)
   );
+  const baseStrategyList = useMemo<StrategyType[]>(() => [...baseStrategies], []);
+  const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>([]);
 
   const results = tournamentOutcome?.results ?? null;
   const swissRounds = tournamentOutcome?.swissRounds ?? null;
 
-  const strategyOrder = useMemo(
-    () => defaultStrategies.map((strategy) => strategy.name),
-    []
+  const availableStrategies = useMemo(
+    () => buildStrategies(baseStrategyList, geneticConfigs),
+    [baseStrategyList, geneticConfigs],
   );
+
+  const strategyMap = useMemo(
+    () => buildStrategyMap(availableStrategies),
+    [availableStrategies],
+  );
+
+  const strategyOrder = useMemo(
+    () => availableStrategies.map((strategy) => strategy.name),
+    [availableStrategies],
+  );
+
+  useEffect(() => {
+    setSelectedStrategyNames((previous) => {
+      const ordered = strategyOrder.filter((name) => previous.includes(name));
+      if (
+        ordered.length === previous.length &&
+        ordered.every((name, index) => name === previous[index])
+      ) {
+        return previous;
+      }
+      return ordered;
+    });
+  }, [strategyOrder]);
 
   const activeStrategies = useMemo(
     () =>
-      defaultStrategies.filter((strategy) =>
-        selectedStrategyNames.includes(strategy.name)
-      ),
-    [selectedStrategyNames]
+      selectedStrategyNames
+        .map((name) => strategyMap.get(name))
+        .filter((strategy): strategy is StrategyType => Boolean(strategy)),
+    [selectedStrategyNames, strategyMap]
   );
 
   const runTournament = useCallback(() => {
@@ -851,6 +927,13 @@ export default function App() {
     seedEnabled,
     seedValue,
   ]);
+
+  const handleGeneticConfigsChange = useCallback(
+    (nextConfigs: GeneticConfigMap) => {
+      setGeneticConfigs(cloneGeneticConfigMap(nextConfigs));
+    },
+    []
+  );
 
   const handleEnterLab = useCallback(() => {
     if (isLandingFading) return;
@@ -915,6 +998,9 @@ export default function App() {
       <main className="mx-auto flex min-h-screen w-full max-w-4xl lg:max-w-6xl flex-col justify-center px-6 py-12">
         {hasStarted ? (
           <TournamentDashboard
+            availableStrategies={availableStrategies}
+            geneticConfigs={geneticConfigs}
+            onGeneticConfigsChange={handleGeneticConfigsChange}
             results={results}
             swissRounds={swissRounds}
             onRunTournament={runTournament}

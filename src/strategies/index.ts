@@ -26,7 +26,7 @@ import { generousTitForTat } from './generousTitForTat';
 import { suspiciousTitForTat } from './suspiciousTitForTat';
 import { introductoryGenetic } from './genetic';
 
-export const defaultStrategies = [
+export const baseStrategies = [
   alwaysCooperate,
   alwaysDefect,
   titForTat,
@@ -39,5 +39,9 @@ export const defaultStrategies = [
   softGrudger,
   generousTitForTat,
   suspiciousTitForTat,
+];
+
+export const defaultStrategies = [
+  ...baseStrategies,
   introductoryGenetic,
 ];

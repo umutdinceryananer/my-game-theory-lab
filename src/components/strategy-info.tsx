@@ -5,11 +5,12 @@ import { Dna, Info, X } from 'lucide-react';
 import type { Strategy } from '@/core/types';
 import type { Gene, GeneticStrategyConfig } from '@/strategies/genetic';
 import { geneticStrategyConfigs } from '@/strategies/genetic';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface StrategyInfoBadgeProps {
   strategy: Strategy;
+  geneticConfig?: GeneticStrategyConfig;
   triggerVariant?: ComponentProps<typeof Button>['variant'];
   triggerSize?: ComponentProps<typeof Button>['size'];
   triggerClassName?: string;
@@ -19,6 +20,7 @@ interface StrategyInfoBadgeProps {
 
 export function StrategyInfoBadge({
   strategy,
+  geneticConfig: geneticConfigOverride,
   triggerVariant = 'ghost',
   triggerSize = 'icon',
   triggerClassName,
@@ -27,7 +29,7 @@ export function StrategyInfoBadge({
 }: StrategyInfoBadgeProps) {
   const [open, setOpen] = useState(false);
   const overlayRef = useRef<HTMLDivElement | null>(null);
-  const geneticConfig = geneticStrategyConfigs[strategy.name];
+  const geneticConfig = geneticConfigOverride ?? geneticStrategyConfigs[strategy.name];
   const close = () => setOpen(false);
   const ariaLabel = triggerAriaLabel ?? `More info about ${strategy.name}`;
   const triggerContent = children ?? <Info className='h-4 w-4' />;
