@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Dna, Plus, Redo2, RefreshCcw, Save, Trash2, Undo2, X } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Dna,
+  Plus,
+  Redo2,
+  RefreshCcw,
+  Save,
+  Trash2,
+  Undo2,
+  X,
+} from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,12 +45,14 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
     cloneGeneticConfigMap(configs),
   ]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const [expandedGeneIds, setExpandedGeneIds] = useState<Set<string>>(() => new Set());
 
   const drafts = history[historyIndex];
 
   useEffect(() => {
     setHistory([cloneGeneticConfigMap(configs)]);
     setHistoryIndex(0);
+    setExpandedGeneIds(new Set());
   }, [configs]);
 
   const draftList = useMemo(
@@ -209,20 +222,27 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
     const strategy = drafts[strategyName];
     if (!strategy) return;
 
+    const newGene = createGeneTemplate();
     const nextDrafts = {
       ...drafts,
       [strategyName]: {
         ...strategy,
-        genome: [...strategy.genome, createGeneTemplate()],
+        genome: [...strategy.genome, newGene],
       },
     };
 
     pushDraft(nextDrafts);
+    setExpandedGeneIds((previous) => {
+      const next = new Set(previous);
+      next.add(newGene.id);
+      return next;
+    });
   };
 
   const handleReset = () => {
     setHistory([cloneGeneticConfigMap(configs)]);
     setHistoryIndex(0);
+    setExpandedGeneIds(new Set());
   };
 
   const handleSave = () => {
@@ -331,121 +351,158 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                 </Button>
               </div>
               <ul className='space-y-3'>
-                {config.genome.map((gene, index) => (
-                  <li
-                    key={gene.id}
-                    className='rounded-lg border border-muted-foreground/40 bg-background/80 p-3 space-y-3'
-                  >
-                    <div className='flex items-center justify-between'>
-                      <div className='flex items-center gap-2 text-[0.7rem] uppercase tracking-wide text-muted-foreground'>
-                        <span className='font-semibold text-primary'>
-                          #{String(index + 1).padStart(2, '0')}
-                        </span>
-                        <span className='font-mono text-xs text-muted-foreground/80'>{gene.id}</span>
+                {config.genome.map((gene, index) => {
+                  const isExpanded = expandedGeneIds.has(gene.id);
+                  return (
+                    <li key={gene.id} className='rounded-lg border border-muted-foreground/40 bg-background/80'>
+                      <div className='flex items-center justify-between border-b border-muted-foreground/40 px-3 py-2'>
+                        <button
+                          type='button'
+                          className='flex flex-1 items-center gap-3 text-left text-sm font-medium text-foreground transition-colors hover:text-primary'
+                          onClick={() =>
+                            setExpandedGeneIds((previous) => {
+                              const next = new Set(previous);
+                              if (next.has(gene.id)) {
+                                next.delete(gene.id);
+                              } else {
+                                next.add(gene.id);
+                              }
+                              return next;
+                            })
+                          }
+                          aria-expanded={isExpanded}
+                        >
+                          <span className='flex h-6 w-6 items-center justify-center rounded-full border border-muted-foreground/30 bg-background text-muted-foreground transition-transform'>
+                            {isExpanded ? (
+                              <ChevronDown className='h-4 w-4' aria-hidden='true' />
+                            ) : (
+                              <ChevronRight className='h-4 w-4' aria-hidden='true' />
+                            )}
+                          </span>
+                          <span className='flex flex-col gap-0.5'>
+                            <span className='text-[0.65rem] font-semibold uppercase text-primary'>
+                              #{String(index + 1).padStart(2, '0')} · {gene.id}
+                            </span>
+                            <span className='text-[0.7rem] font-normal text-muted-foreground'>
+                              {describeGene(gene)}
+                            </span>
+                          </span>
+                        </button>
+                        <Button
+                          type='button'
+                          variant='ghost'
+                          size='icon'
+                          className='text-muted-foreground hover:text-destructive'
+                          onClick={() => {
+                            setExpandedGeneIds((previous) => {
+                              const next = new Set(previous);
+                              next.delete(gene.id);
+                              return next;
+                            });
+                            handleRemoveGene(config.name, gene.id);
+                          }}
+                          aria-label={`Remove gene ${index + 1}`}
+                        >
+                          <Trash2 className='h-4 w-4' aria-hidden='true' />
+                        </Button>
                       </div>
-                      <Button
-                        type='button'
-                        variant='ghost'
-                        size='icon'
-                        className='text-muted-foreground hover:text-destructive'
-                        onClick={() => handleRemoveGene(config.name, gene.id)}
-                        aria-label={`Remove gene ${index + 1}`}
-                      >
-                        <Trash2 className='h-4 w-4' aria-hidden='true' />
-                      </Button>
-                    </div>
-                    <div className='grid gap-3 sm:grid-cols-2'>
-                      <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                        Response
-                        <select
-                          className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
-                          value={gene.response}
-                          onChange={(event) =>
-                            handleGeneFieldChange(config.name, gene.id, 'response', event.target.value)
-                          }
-                        >
-                          {MOVES.map((move) => (
-                            <option key={move} value={move}>
-                              {move}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                        Weight
-                        <Input
-                          type='number'
-                          step='0.1'
-                          min='0'
-                          value={gene.weight ?? ''}
-                          onChange={(event) =>
-                            handleGeneFieldChange(config.name, gene.id, 'weight', event.target.value)
-                          }
-                        />
-                      </label>
-                    </div>
-                    <div className='grid gap-3 sm:grid-cols-2'>
-                      <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                        Opponent last move
-                        <select
-                          className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
-                          value={gene.condition.opponentLastMove ?? ''}
-                          onChange={(event) =>
-                            handleMoveCondition(config.name, gene.id, 'opponentLastMove', event.target.value)
-                          }
-                        >
-                          <option value=''>Any</option>
-                          {MOVES.map((move) => (
-                            <option key={move} value={move}>
-                              {move}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                        Self last move
-                        <select
-                          className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
-                          value={gene.condition.selfLastMove ?? ''}
-                          onChange={(event) =>
-                            handleMoveCondition(config.name, gene.id, 'selfLastMove', event.target.value)
-                          }
-                        >
-                          <option value=''>Any</option>
-                          {MOVES.map((move) => (
-                            <option key={move} value={move}>
-                              {move}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div className='grid gap-3 sm:grid-cols-2'>
-                      <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                        Round start
-                        <Input
-                          type='number'
-                          min='1'
-                          value={gene.condition.roundRange?.[0] ?? ''}
-                          onChange={(event) =>
-                            handleRoundRangeChange(config.name, gene.id, 'start', event.target.value)
-                          }
-                        />
-                      </label>
-                      <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                        Round end
-                        <Input
-                          type='number'
-                          min='1'
-                          value={gene.condition.roundRange?.[1] ?? ''}
-                          onChange={(event) =>
-                            handleRoundRangeChange(config.name, gene.id, 'end', event.target.value)
-                          }
-                        />
-                      </label>
-                    </div>
-                  </li>
-                ))}
+                      {isExpanded && (
+                        <div className='space-y-3 p-3 pt-4'>
+                          <div className='grid gap-3 sm:grid-cols-2'>
+                            <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
+                              Response
+                              <select
+                                className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
+                                value={gene.response}
+                                onChange={(event) =>
+                                  handleGeneFieldChange(config.name, gene.id, 'response', event.target.value)
+                                }
+                              >
+                                {MOVES.map((move) => (
+                                  <option key={move} value={move}>
+                                    {move}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
+                              Weight
+                              <Input
+                                type='number'
+                                step='0.1'
+                                min='0'
+                                value={gene.weight ?? ''}
+                                onChange={(event) =>
+                                  handleGeneFieldChange(config.name, gene.id, 'weight', event.target.value)
+                                }
+                              />
+                            </label>
+                          </div>
+                          <div className='grid gap-3 sm:grid-cols-2'>
+                            <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
+                              Opponent last move
+                              <select
+                                className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
+                                value={gene.condition.opponentLastMove ?? ''}
+                                onChange={(event) =>
+                                  handleMoveCondition(config.name, gene.id, 'opponentLastMove', event.target.value)
+                                }
+                              >
+                                <option value=''>Any</option>
+                                {MOVES.map((move) => (
+                                  <option key={move} value={move}>
+                                    {move}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
+                              Self last move
+                              <select
+                                className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
+                                value={gene.condition.selfLastMove ?? ''}
+                                onChange={(event) =>
+                                  handleMoveCondition(config.name, gene.id, 'selfLastMove', event.target.value)
+                                }
+                              >
+                                <option value=''>Any</option>
+                                {MOVES.map((move) => (
+                                  <option key={move} value={move}>
+                                    {move}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                          <div className='grid gap-3 sm:grid-cols-2'>
+                            <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
+                              Round start
+                              <Input
+                                type='number'
+                                min='1'
+                                value={gene.condition.roundRange?.[0] ?? ''}
+                                onChange={(event) =>
+                                  handleRoundRangeChange(config.name, gene.id, 'start', event.target.value)
+                                }
+                              />
+                            </label>
+                            <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
+                              Round end
+                              <Input
+                                type='number'
+                                min='1'
+                                value={gene.condition.roundRange?.[1] ?? ''}
+                                onChange={(event) =>
+                                  handleRoundRangeChange(config.name, gene.id, 'end', event.target.value)
+                                }
+                              />
+                            </label>
+                          </div>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           </section>
