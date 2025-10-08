@@ -126,7 +126,7 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
               <p className='font-semibold uppercase tracking-wide text-foreground'>Genes</p>
               <ul className='space-y-2'>
                 {config.genome.map((gene, index) => (
-                  <li key={`${config.name}-gene-${index}`} className='flex items-start gap-2'>
+                  <li key={gene.id ?? `${config.name}-gene-${index}`} className='flex items-start gap-2'>
                     <span className='mt-0.5 text-[0.65rem] font-semibold text-primary'>
                       #{String(index + 1).padStart(2, '0')}
                     </span>

@@ -1,5 +1,7 @@
 import type { Move } from '@/core/types';
 
+export type GeneId = string;
+
 /**
  * Describes the conditional branch used by a genetic strategy when deciding on a move.
  * Conditions are deliberately lightweight so we can start iterating without touching the
@@ -25,6 +27,7 @@ export interface GeneCondition {
  * A single rule within the genome. Rules are evaluated in order; the first match yields the move.
  */
 export interface Gene {
+  id: GeneId;
   condition: GeneCondition;
   response: Move;
   /**

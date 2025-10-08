@@ -1,0 +1,39 @@
+        ))}
+      </ul>
+      {(config.mutationRate !== undefined || config.crossoverRate !== undefined) && (
+        <p className='text-[0.65rem] uppercase text-muted-foreground'>
+          Mutation {formatRate(config.mutationRate)} · Crossover {formatRate(config.crossoverRate)}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function describeGene(gene: Gene): string {
+  const { condition, response } = gene;
+  const parts: string[] = [];
+
+  if (condition.roundRange) {
+    const [start, end] = condition.roundRange;
+    parts.push(start === end ? `round ${start}` : `rounds ${start}-${end}`);
+  }
+
+  if (condition.selfLastMove) {
+    parts.push(`I played ${condition.selfLastMove.toLowerCase()}`);
+  }
+
+  if (condition.opponentLastMove) {
+    parts.push(`opponent played ${condition.opponentLastMove.toLowerCase()}`);
+  }
+
+  if (parts.length === 0) {
+    return `Default response → ${response.toLowerCase()}.`;
+  }
+
+  return `If ${parts.join(' and ')} → ${response.toLowerCase()}.`;
+}
+
+function formatRate(value: number | undefined): string {
+  if (value === undefined) return 'n/a';
+  return `${Math.round(value * 100)}%`;
+}

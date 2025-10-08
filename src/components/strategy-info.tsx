@@ -142,7 +142,7 @@ function GeneticDetails({ config }: { config: GeneticStrategyConfig }) {
       </div>
       <ul className='space-y-2 text-xs text-muted-foreground'>
         {config.genome.map((gene, index) => (
-          <li key={`${config.name}-gene-${index}`} className='flex items-start gap-2'>
+          <li key={gene.id ?? `${config.name}-gene-${index}`} className='flex items-start gap-2'>
             <span className='mt-0.5 text-[0.65rem] font-semibold text-primary'>
               #{String(index + 1).padStart(2, '0')}
             </span>
@@ -152,7 +152,7 @@ function GeneticDetails({ config }: { config: GeneticStrategyConfig }) {
       </ul>
       {(config.mutationRate !== undefined || config.crossoverRate !== undefined) && (
         <p className='text-[0.65rem] uppercase text-muted-foreground'>
-          Mutation {formatRate(config.mutationRate)} · Crossover {formatRate(config.crossoverRate)}
+          Mutation {formatRate(config.mutationRate)} / Crossover {formatRate(config.crossoverRate)}
         </p>
       )}
     </div>
@@ -177,10 +177,10 @@ function describeGene(gene: Gene): string {
   }
 
   if (parts.length === 0) {
-    return `Default response → ${response.toLowerCase()}.`;
+    return `Default response -> ${response.toLowerCase()}.`;
   }
 
-  return `If ${parts.join(' and ')} → ${response.toLowerCase()}.`;
+  return `If ${parts.join(' and ')} -> ${response.toLowerCase()}.`;
 }
 
 function formatRate(value: number | undefined): string {

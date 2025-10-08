@@ -7,8 +7,8 @@ import { createSequenceRandom } from './utils/random';
 describe('mutateGenome', () => {
   it('returns a new genome instance', () => {
     const genome: Genome = [
-      { condition: {}, response: 'COOPERATE' },
-      { condition: { opponentLastMove: 'DEFECT' }, response: 'DEFECT' },
+      { id: 'g-1', condition: {}, response: 'COOPERATE' },
+      { id: 'g-2', condition: { opponentLastMove: 'DEFECT' }, response: 'DEFECT' },
     ];
 
     const mutated = mutateGenome(genome, { mutationRate: 0, random: () => 0 });
@@ -17,7 +17,7 @@ describe('mutateGenome', () => {
   });
 
   it('mutates response when random threshold is met', () => {
-    const genome: Genome = [{ condition: {}, response: 'COOPERATE' }];
+    const genome: Genome = [{ id: 'g-3', condition: {}, response: 'COOPERATE' }];
     const mutated = mutateGenome(genome, {
       mutationRate: 1,
       random: createSequenceRandom([0.1, 0.9, 0.9, 0.9, 0.9]),
@@ -29,6 +29,7 @@ describe('mutateGenome', () => {
   it('removes conditions when mutation threshold is met', () => {
     const genome: Genome = [
       {
+        id: 'g-4',
         condition: { opponentLastMove: 'COOPERATE', selfLastMove: 'DEFECT', roundRange: [2, 3] },
         response: 'COOPERATE',
       },
@@ -54,15 +55,15 @@ describe('mutateGenome', () => {
 describe('singlePointCrossover', () => {
   it('swaps tails after a random cut point', () => {
     const left: Genome = [
-      { condition: { selfLastMove: 'COOPERATE' }, response: 'DEFECT' },
-      { condition: {}, response: 'COOPERATE' },
-      { condition: { opponentLastMove: 'DEFECT' }, response: 'DEFECT' },
+      { id: 'l-1', condition: { selfLastMove: 'COOPERATE' }, response: 'DEFECT' },
+      { id: 'l-2', condition: {}, response: 'COOPERATE' },
+      { id: 'l-3', condition: { opponentLastMove: 'DEFECT' }, response: 'DEFECT' },
     ];
 
     const right: Genome = [
-      { condition: {}, response: 'COOPERATE' },
-      { condition: { opponentLastMove: 'COOPERATE' }, response: 'COOPERATE' },
-      { condition: { opponentLastMove: 'DEFECT' }, response: 'COOPERATE' },
+      { id: 'r-1', condition: {}, response: 'COOPERATE' },
+      { id: 'r-2', condition: { opponentLastMove: 'COOPERATE' }, response: 'COOPERATE' },
+      { id: 'r-3', condition: { opponentLastMove: 'DEFECT' }, response: 'COOPERATE' },
     ];
 
     const [childA, childB] = singlePointCrossover(left, right, {
@@ -84,8 +85,8 @@ describe('singlePointCrossover', () => {
 
   it('handles short genomes without throwing', () => {
     const [childA, childB] = singlePointCrossover(
-      [{ condition: {}, response: 'COOPERATE' }],
-      [{ condition: {}, response: 'DEFECT' }],
+      [{ id: 'a-1', condition: {}, response: 'COOPERATE' }],
+      [{ id: 'b-1', condition: {}, response: 'DEFECT' }],
     );
 
     expect(childA).toHaveLength(1);

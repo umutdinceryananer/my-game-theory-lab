@@ -46,10 +46,18 @@ export function singlePointCrossover(
 
 function mutateGene(gene: Gene, mutationRate: number, random: () => number): Gene {
   const result: Gene = {
+    id: gene.id,
     condition: { ...gene.condition },
     response: gene.response,
     weight: gene.weight,
   };
+
+  if (gene.condition.roundRange) {
+    result.condition.roundRange = [
+      gene.condition.roundRange[0],
+      gene.condition.roundRange[1],
+    ];
+  }
 
   if (random() < mutationRate) {
     result.response = pickDifferentMove(result.response, random);
@@ -105,7 +113,13 @@ function pickDifferentMove(current: Move, random: () => number): Move {
 
 function cloneGenome(genome: Genome): Genome {
   return genome.map((gene) => ({
-    condition: { ...gene.condition },
+    id: gene.id,
+    condition: {
+      ...gene.condition,
+      roundRange: gene.condition.roundRange
+        ? [gene.condition.roundRange[0], gene.condition.roundRange[1]]
+        : undefined,
+    },
     response: gene.response,
     weight: gene.weight,
   }));

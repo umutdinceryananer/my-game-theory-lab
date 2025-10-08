@@ -1,5 +1,6 @@
 import type { GameHistory, Strategy } from '@/core/types';
 import type { Gene, GeneticStrategyConfig, Genome } from './genome';
+import { createGeneTemplate, ensureGeneIds } from './utils';
 
 /**
  * Creates a Strategy implementation from a GeneticStrategyConfig. The genome is read-only at
@@ -20,14 +21,10 @@ export function createGeneticStrategy(config: GeneticStrategyConfig): Strategy {
 }
 
 function ensureGenome(genome: Genome): Genome {
-  if (genome.length > 0) return genome;
-
-  return [
-    {
-      condition: {},
-      response: 'COOPERATE',
-    },
-  ];
+  if (genome.length === 0) {
+    return [createGeneTemplate()];
+  }
+  return ensureGeneIds(genome);
 }
 
 function matchesGene(gene: Gene, history: GameHistory, round: number): boolean {
