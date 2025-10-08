@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Dna, Plus, RefreshCcw, Save, Trash2, X } from 'lucide-react';
+import { Dna, Plus, Redo2, RefreshCcw, Save, Trash2, Undo2, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,12 +30,16 @@ interface GeneticStrategyEditorProps {
 }
 
 export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrategyEditorProps) {
-  const [drafts, setDrafts] = useState<Record<string, GeneticStrategyConfig>>(() =>
+  const [history, setHistory] = useState<Record<string, GeneticStrategyConfig>[]>(() => [
     cloneGeneticConfigMap(configs),
-  );
+  ]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  const drafts = history[historyIndex];
 
   useEffect(() => {
-    setDrafts(cloneGeneticConfigMap(configs));
+    setHistory([cloneGeneticConfigMap(configs)]);
+    setHistoryIndex(0);
   }, [configs]);
 
   const draftList = useMemo(
@@ -62,6 +66,16 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
     return changed;
   }, [canonicalOriginal, canonicalDraft]);
   const hasChanges = changedStrategies.size > 0;
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  const pushDraft = (nextDrafts: Record<string, GeneticStrategyConfig>) => {
+    setHistory((previous) => {
+      const sliced = previous.slice(0, historyIndex + 1);
+      return [...sliced, nextDrafts];
+    });
+    setHistoryIndex((previous) => previous + 1);
+  };
 
   const handleRateChange = (
     name: string,
@@ -70,51 +84,49 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
   ) => {
     const parsed = Number.parseFloat(value);
     const normalized = Number.isFinite(parsed) ? clamp(parsed, 0, 1) : undefined;
-    setDrafts((previous) => {
-      const existing = previous[name];
-      if (!existing) return previous;
-      return {
-        ...previous,
-        [name]: {
-          ...existing,
-          [field]: normalized,
-        },
-      };
-    });
+    const existing = drafts[name];
+    if (!existing) return;
+    const nextDrafts = {
+      ...drafts,
+      [name]: {
+        ...existing,
+        [field]: normalized,
+      },
+    };
+    pushDraft(nextDrafts);
   };
 
   const updateGene = (strategyName: string, geneId: string, updater: (gene: Gene) => Gene | null) => {
-    setDrafts((previous) => {
-      const strategy = previous[strategyName];
-      if (!strategy) return previous;
+    const strategy = drafts[strategyName];
+    if (!strategy) return;
 
-      const nextGenome: Gene[] = [];
-      let changed = false;
+    const nextGenome: Gene[] = [];
+    let changed = false;
 
-      for (const gene of strategy.genome) {
-        if (gene.id !== geneId) {
-          nextGenome.push(gene);
-          continue;
-        }
-
-        const nextGene = updater(gene);
-        changed = true;
-
-        if (nextGene) {
-          nextGenome.push(nextGene);
-        }
+    for (const gene of strategy.genome) {
+      if (gene.id !== geneId) {
+        nextGenome.push(gene);
+        continue;
       }
 
-      if (!changed) return previous;
+      const nextGene = updater(gene);
+      changed = true;
 
-      return {
-        ...previous,
-        [strategyName]: {
-          ...strategy,
-          genome: nextGenome.length > 0 ? ensureGeneIds(nextGenome) : [createGeneTemplate()],
-        },
-      };
-    });
+      if (nextGene) {
+        nextGenome.push(nextGene);
+      }
+    }
+
+    if (!changed) return;
+
+    const nextDrafts = {
+      ...drafts,
+      [strategyName]: {
+        ...strategy,
+        genome: nextGenome.length > 0 ? ensureGeneIds(nextGenome) : [createGeneTemplate()],
+      },
+    };
+    pushDraft(nextDrafts);
   };
 
   const handleGeneFieldChange = (
@@ -194,27 +206,38 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
   };
 
   const handleAddGene = (strategyName: string) => {
-    setDrafts((previous) => {
-      const strategy = previous[strategyName];
-      if (!strategy) return previous;
+    const strategy = drafts[strategyName];
+    if (!strategy) return;
 
-      return {
-        ...previous,
-        [strategyName]: {
-          ...strategy,
-          genome: [...strategy.genome, createGeneTemplate()],
-        },
-      };
-    });
+    const nextDrafts = {
+      ...drafts,
+      [strategyName]: {
+        ...strategy,
+        genome: [...strategy.genome, createGeneTemplate()],
+      },
+    };
+
+    pushDraft(nextDrafts);
   };
 
   const handleReset = () => {
-    setDrafts(cloneGeneticConfigMap(configs));
+    setHistory([cloneGeneticConfigMap(configs)]);
+    setHistoryIndex(0);
   };
 
   const handleSave = () => {
     onSave(cloneGeneticConfigMap(drafts));
     onClose();
+  };
+
+  const handleUndo = () => {
+    if (!canUndo) return;
+    setHistoryIndex((previous) => Math.max(0, previous - 1));
+  };
+
+  const handleRedo = () => {
+    if (!canRedo) return;
+    setHistoryIndex((previous) => Math.min(history.length - 1, previous + 1));
   };
 
   return (
@@ -430,6 +453,26 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
       </CardContent>
       <CardFooter className='flex flex-col-reverse gap-2 sm:flex-row sm:justify-between sm:gap-4'>
         <div className='flex gap-2'>
+          <Button
+            type='button'
+            variant='ghost'
+            className='flex items-center gap-2'
+            onClick={handleUndo}
+            disabled={!canUndo}
+          >
+            <Undo2 className='h-4 w-4' aria-hidden='true' />
+            Undo
+          </Button>
+          <Button
+            type='button'
+            variant='ghost'
+            className='flex items-center gap-2'
+            onClick={handleRedo}
+            disabled={!canRedo}
+          >
+            <Redo2 className='h-4 w-4' aria-hidden='true' />
+            Redo
+          </Button>
           <Button
             variant='ghost'
             onClick={handleReset}
