@@ -13,7 +13,12 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import type { Gene, GeneticStrategyConfig } from '@/strategies/genetic';
-import { cloneGeneticConfigMap, createGeneTemplate, ensureGeneIds } from '@/strategies/genetic/utils';
+import {
+  canonicalizeConfigMap,
+  cloneGeneticConfigMap,
+  createGeneTemplate,
+  ensureGeneIds,
+} from '@/strategies/genetic/utils';
 import type { Move } from '@/core/types';
 
 const MOVES: Move[] = ['COOPERATE', 'DEFECT'];
@@ -48,7 +53,9 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
     for (const name of names) {
       const original = canonicalOriginal[name];
       const updated = canonicalDraft[name];
-      if (JSON.stringify(original) !== JSON.stringify(updated)) {
+      const originalKey = original ? JSON.stringify(original) : '';
+      const updatedKey = updated ? JSON.stringify(updated) : '';
+      if (originalKey !== updatedKey) {
         changed.add(name);
       }
     }
@@ -243,7 +250,7 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                   </Badge>
                   {changedStrategies.has(config.name) && (
                     <Badge variant='outline' className='text-[0.6rem] uppercase text-primary'>
-                      Edited
+                       Edited
                     </Badge>
                   )}
                 </h3>
@@ -261,7 +268,11 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                     onChange={(event) =>
                       handleRateChange(config.name, 'mutationRate', event.target.value)
                     }
+                    aria-describedby={`${config.name}-mutation-hint`}
                   />
+                  <span id={`${config.name}-mutation-hint`} className='text-[0.6rem] text-muted-foreground'>
+                    Defines how likely this genome mutates during evolutionary runs.
+                  </span>
                 </label>
                 <label className='flex flex-col gap-1 text-xs font-medium uppercase text-muted-foreground'>
                   Crossover rate (0-1)
@@ -274,7 +285,11 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                     onChange={(event) =>
                       handleRateChange(config.name, 'crossoverRate', event.target.value)
                     }
+                    aria-describedby={`${config.name}-crossover-hint`}
                   />
+                  <span id={`${config.name}-crossover-hint`} className='text-[0.6rem] text-muted-foreground'>
+                    Used when combining genomes to form new offspring strategies.
+                  </span>
                 </label>
               </div>
             </header>
@@ -460,57 +475,6 @@ function describeGene(gene: Gene): string {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
-}
-
-type CanonicalGene = {
-  id: string;
-  response: Move;
-  weight: number | null;
-  condition: {
-    opponentLastMove: Move | null;
-    selfLastMove: Move | null;
-    roundRange: [number, number] | null;
-  };
-};
-
-type CanonicalConfig = {
-  name: string;
-  description: string;
-  mutationRate: number | null;
-  crossoverRate: number | null;
-  genome: CanonicalGene[];
-};
-
-function canonicalizeConfig(config: GeneticStrategyConfig): CanonicalConfig {
-  return {
-    name: config.name,
-    description: config.description,
-    mutationRate: config.mutationRate ?? null,
-    crossoverRate: config.crossoverRate ?? null,
-    genome: config.genome.map((gene, index) => ({
-      id: gene.id ?? `gene-${index}`,
-      response: gene.response,
-      weight: gene.weight ?? null,
-      condition: {
-        opponentLastMove: gene.condition.opponentLastMove ?? null,
-        selfLastMove: gene.condition.selfLastMove ?? null,
-        roundRange: gene.condition.roundRange
-          ? [gene.condition.roundRange[0], gene.condition.roundRange[1]]
-          : null,
-      },
-    })),
-  };
-}
-
-function canonicalizeConfigMap(
-  configs: Record<string, GeneticStrategyConfig>,
-): Record<string, CanonicalConfig> {
-  const entries = Object.entries(configs).map<[string, CanonicalConfig]>(([name, config]) => [
-    name,
-    canonicalizeConfig(config),
-  ]);
-  entries.sort((a, b) => a[0].localeCompare(b[0]));
-  return Object.fromEntries(entries);
 }
 
 

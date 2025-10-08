@@ -1,4 +1,5 @@
 import type { Gene, GeneId, GeneticStrategyConfig, Genome } from './genome';
+import type { Move } from '@/core/types';
 
 let geneIdCounter = 0;
 
@@ -80,4 +81,55 @@ export function createGeneTemplate(
   }
 
   return cloneGene(gene);
+}
+
+export interface CanonicalGene {
+  id: GeneId;
+  response: Move;
+  weight: number | null;
+  condition: {
+    opponentLastMove: Move | null;
+    selfLastMove: Move | null;
+    roundRange: [number, number] | null;
+  };
+}
+
+export interface CanonicalGeneticConfig {
+  name: string;
+  description: string;
+  mutationRate: number | null;
+  crossoverRate: number | null;
+  genome: CanonicalGene[];
+}
+
+export function canonicalizeConfig(config: GeneticStrategyConfig): CanonicalGeneticConfig {
+  const genome = ensureGeneIds(config.genome);
+  return {
+    name: config.name,
+    description: config.description,
+    mutationRate: config.mutationRate ?? null,
+    crossoverRate: config.crossoverRate ?? null,
+    genome: genome.map((gene, index) => ({
+      id: gene.id ?? (`gene-${index}` as GeneId),
+      response: gene.response,
+      weight: gene.weight ?? null,
+      condition: {
+        opponentLastMove: gene.condition.opponentLastMove ?? null,
+        selfLastMove: gene.condition.selfLastMove ?? null,
+        roundRange: gene.condition.roundRange
+          ? [gene.condition.roundRange[0], gene.condition.roundRange[1]]
+          : null,
+      },
+    })),
+  };
+}
+
+export function canonicalizeConfigMap(
+  configs: Record<string, GeneticStrategyConfig>,
+): Record<string, CanonicalGeneticConfig> {
+  const entries = Object.entries(configs)
+    .map<[string, CanonicalGeneticConfig]>(([name, config]) => [name, canonicalizeConfig(config)])
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  return Object.fromEntries(entries);
 }

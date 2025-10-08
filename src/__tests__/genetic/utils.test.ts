@@ -7,6 +7,9 @@ import {
   createGeneId,
   createGeneTemplate,
   ensureGeneIds,
+  canonicalizeConfig,
+  canonicalizeConfigMap,
+  createGeneTemplate,
 } from '@/strategies/genetic/utils';
 
 describe('createGeneId', () => {
@@ -83,5 +86,66 @@ describe('cloneGeneticConfig', () => {
 
     expect(map[baseConfig.name]).toEqual(baseConfig);
     expect(map[baseConfig.name]).not.toBe(baseConfig);
+  });
+});
+
+describe('canonical helpers', () => {
+  const baseConfig: GeneticStrategyConfig = {
+    name: 'Canon',
+    description: 'Canonical config',
+    mutationRate: 0.2,
+    crossoverRate: 0.7,
+    genome: [
+      createGeneTemplate({ id: 'gene-A', response: 'COOPERATE' }),
+      createGeneTemplate({
+        id: 'gene-B',
+        response: 'DEFECT',
+        weight: 1.5,
+        condition: { opponentLastMove: 'DEFECT', roundRange: [2, 5] },
+      }),
+    ],
+  };
+
+  it('produces deterministic canonical structures', () => {
+    const canon = canonicalizeConfig(baseConfig);
+    expect(canon).toEqual({
+      name: baseConfig.name,
+      description: baseConfig.description,
+      mutationRate: 0.2,
+      crossoverRate: 0.7,
+      genome: [
+        {
+          id: 'gene-A',
+          response: 'COOPERATE',
+          weight: null,
+          condition: {
+            opponentLastMove: null,
+            selfLastMove: null,
+            roundRange: null,
+          },
+        },
+        {
+          id: 'gene-B',
+          response: 'DEFECT',
+          weight: 1.5,
+          condition: {
+            opponentLastMove: 'DEFECT',
+            selfLastMove: null,
+            roundRange: [2, 5],
+          },
+        },
+      ],
+    });
+  });
+
+  it('compares config maps without reference sensitivity', () => {
+    const mapA = canonicalizeConfigMap({ canon: baseConfig });
+    const mapB = canonicalizeConfigMap({
+      canon: {
+        ...baseConfig,
+        genome: baseConfig.genome.map((gene) => ({ ...gene })),
+      },
+    });
+    expect(mapA).toEqual(mapB);
   });
 });
