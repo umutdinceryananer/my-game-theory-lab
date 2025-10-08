@@ -10,6 +10,7 @@ export { titForTwoTats } from './titForTwoTats';
 export { softGrudger } from './softGrudger';
 export { generousTitForTat } from './generousTitForTat';
 export { suspiciousTitForTat } from './suspiciousTitForTat';
+export { introductoryGenetic } from './genetic';
 
 import { alwaysCooperate } from './alwaysCooperate';
 import { alwaysDefect } from './alwaysDefect';
@@ -23,6 +24,7 @@ import { titForTwoTats } from './titForTwoTats';
 import { softGrudger } from './softGrudger';
 import { generousTitForTat } from './generousTitForTat';
 import { suspiciousTitForTat } from './suspiciousTitForTat';
+import { introductoryGenetic } from './genetic';
 
 export const defaultStrategies = [
   alwaysCooperate,
@@ -37,4 +39,5 @@ export const defaultStrategies = [
   softGrudger,
   generousTitForTat,
   suspiciousTitForTat,
+  introductoryGenetic,
 ];
