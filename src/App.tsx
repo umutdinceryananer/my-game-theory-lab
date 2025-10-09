@@ -90,6 +90,36 @@ type DashboardProps = {
 
 type GeneticConfigMap = Record<string, GeneticStrategyConfig>;
 
+function getEvolutionSettingsIssues(settings: EvolutionSettings): string[] {
+  const issues: string[] = [];
+  if (!Number.isFinite(settings.populationSize) || settings.populationSize < 2) {
+    issues.push("Population size must be at least 2.");
+  }
+  if (!Number.isFinite(settings.generations) || settings.generations < 1) {
+    issues.push("Generations must be at least 1.");
+  }
+  if (!Number.isFinite(settings.elitismCount) || settings.elitismCount < 0) {
+    issues.push("Elitism count cannot be negative.");
+  } else if (settings.elitismCount >= settings.populationSize) {
+    issues.push("Elitism count must be less than population size.");
+  }
+  if (!Number.isFinite(settings.mutationRate) || settings.mutationRate < 0 || settings.mutationRate > 1) {
+    issues.push("Mutation rate must be between 0 and 1.");
+  }
+  if (!Number.isFinite(settings.crossoverRate) || settings.crossoverRate < 0 || settings.crossoverRate > 1) {
+    issues.push("Crossover rate must be between 0 and 1.");
+  }
+  if (settings.selectionMethod === "tournament") {
+    const size = settings.tournamentSize ?? 0;
+    if (!Number.isFinite(size) || size < 2) {
+      issues.push("Tournament size must be at least 2.");
+    } else if (size > settings.populationSize) {
+      issues.push("Tournament size cannot exceed population size.");
+    }
+  }
+  return issues;
+}
+
 function buildStrategies(base: StrategyType[], configs: GeneticConfigMap): StrategyType[] {
   const geneticList = Object.values(configs).map((config) => createGeneticStrategy(config));
   return [...base, ...geneticList];
@@ -182,6 +212,17 @@ function TournamentDashboard({
 
   const minParticipants = evolutionEnabled ? 1 : 2;
   const evolutionAnalytics = useEvolutionAnalytics(evolutionSummary);
+  const evolutionSettingsErrors = useMemo(
+    () => (evolutionEnabled ? getEvolutionSettingsIssues(evolutionSettings) : []),
+    [evolutionEnabled, evolutionSettings],
+  );
+  const elitismInvalid =
+    evolutionEnabled && (evolutionSettings.elitismCount >= evolutionSettings.populationSize || evolutionSettings.elitismCount < 0);
+  const tournamentSizeValue = evolutionSettings.tournamentSize ?? 3;
+  const tournamentSizeInvalid =
+    evolutionEnabled &&
+    evolutionSettings.selectionMethod === "tournament" &&
+    (tournamentSizeValue > evolutionSettings.populationSize || tournamentSizeValue < 2);
 
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
@@ -903,6 +944,10 @@ function TournamentDashboard({
                     type="number"
                     min={0}
                     value={evolutionSettings.elitismCount}
+                    aria-invalid={elitismInvalid}
+                    className={cn(
+                      elitismInvalid && "border-destructive focus-visible:ring-destructive focus-visible:ring-1"
+                    )}
                     onChange={(event) =>
                       updateEvolutionSetting(
                         "elitismCount",
@@ -910,6 +955,14 @@ function TournamentDashboard({
                       )
                     }
                   />
+                  <div className="space-y-1">
+                    <p className="text-[0.65rem] text-muted-foreground">
+                      Preserve top performers each generation (must be less than population size).
+                    </p>
+                    {elitismInvalid && (
+                      <p className="text-[0.65rem] text-destructive">Elitism count must be lower than population size.</p>
+                    )}
+                  </div>
                 </label>
               </div>
               {evolutionSettings.selectionMethod === "tournament" && (
@@ -919,7 +972,11 @@ function TournamentDashboard({
                     <Input
                       type="number"
                       min={2}
-                      value={evolutionSettings.tournamentSize ?? 3}
+                      value={tournamentSizeValue}
+                      aria-invalid={tournamentSizeInvalid}
+                      className={cn(
+                        tournamentSizeInvalid && "border-destructive focus-visible:ring-destructive focus-visible:ring-1"
+                      )}
                       onChange={(event) =>
                         updateEvolutionSetting(
                           "tournamentSize",
@@ -927,6 +984,14 @@ function TournamentDashboard({
                         )
                       }
                     />
+                    <div className="space-y-1">
+                      <p className="text-[0.65rem] text-muted-foreground">
+                        Number of contenders sampled per selection (cannot exceed population size).
+                      </p>
+                      {tournamentSizeInvalid && (
+                        <p className="text-[0.65rem] text-destructive">Tournament size cannot exceed population size.</p>
+                      )}
+                    </div>
                   </label>
                   <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
                     Random seed (optional)
@@ -947,6 +1012,16 @@ function TournamentDashboard({
                   Select at least {minParticipants} opponent{minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
                 </p>
               )}
+              {evolutionSettingsErrors.length > 0 && (
+                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+                  <p className="font-semibold">Evolution settings need attention:</p>
+                  <ul className="mt-2 space-y-1 list-disc pl-4 text-destructive">
+                    {evolutionSettingsErrors.map((issue) => (
+                      <li key={issue}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
           {evolutionEnabled && <EvolutionSummaryCard data={evolutionAnalytics} />}
@@ -957,7 +1032,11 @@ function TournamentDashboard({
             size="lg"
             onClick={() => void onRunTournament()}
             className="w-full sm:w-auto"
-            disabled={isRunning || activeStrategyCount < minParticipants}
+            disabled={
+              isRunning ||
+              activeStrategyCount < minParticipants ||
+              (evolutionEnabled && evolutionSettingsErrors.length > 0)
+            }
           >
             {!isRunning && <Play className="mr-2 h-4 w-4" />}
             {isRunning
@@ -1113,6 +1192,13 @@ export default function App() {
       if (isRunning) return;
       const minimumRequired = evolutionEnabled ? 1 : 2;
       if (activeStrategies.length < minimumRequired) return;
+      if (evolutionEnabled) {
+        const issues = getEvolutionSettingsIssues(evolutionSettings);
+        if (issues.length > 0) {
+          console.warn("Evolution run blocked due to invalid settings:", issues);
+          return;
+        }
+      }
 
       setIsRunning(true);
       try {
