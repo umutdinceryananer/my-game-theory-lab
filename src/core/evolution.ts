@@ -126,14 +126,14 @@ export interface EvolutionEngine {
 
   /**
    * Creates the initial population. May source genomes from the genetic editor or defaults.
-   */
+  */
   initializePopulation(): PopulationIndividual[];
 
   /**
    * Runs the configured number of generations and returns a summary.
    */
   run(params: {
-    evaluateFitness: EvaluateFitnessFn;
+    evaluateFitness?: EvaluateFitnessFn;
     initialPopulation?: PopulationIndividual[];
   }): Promise<EvolutionSummary>;
 }
@@ -150,3 +150,5 @@ export function isEvolutionEngine(value: unknown): value is EvolutionEngine {
     typeof engine.run === 'function'
   );
 }
+
+export { createBasicEvolutionEngine } from './evolutionEngine';
