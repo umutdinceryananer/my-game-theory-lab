@@ -2,6 +2,7 @@ import { createRandomSource } from './random';
 import { Tournament, DEFAULT_TOURNAMENT_FORMAT } from './tournament';
 import { DEFAULT_PAYOFF_MATRIX } from './types';
 import type { PayoffMatrix, Strategy } from './types';
+import type { TournamentFormat } from './tournament';
 import { cloneGeneticConfig, ensureGeneIds } from '@/strategies/genetic/utils';
 import { createGeneticStrategy } from '@/strategies/genetic';
 import { mutateGenome as applyGenomeMutation, singlePointCrossover } from '@/strategies/genetic/operators';
@@ -21,12 +22,7 @@ interface FitnessOptions {
   rounds?: number;
   errorRate?: number;
   payoffMatrix?: PayoffMatrix;
-  format?: Tournament['runWithFormat'] extends (
-    infer F,
-    ...args: infer Args
-  ) => any
-    ? Args[0]
-    : never;
+  format?: TournamentFormat;
 }
 
 interface BasicEvolutionEngineOptions {

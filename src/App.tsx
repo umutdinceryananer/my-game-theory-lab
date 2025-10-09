@@ -5,6 +5,7 @@ import { LandingScreen } from "@/components/landing-screen";
 import { SimulationParametersPanel } from "@/components/panels/simulation-parameters";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Card,
   CardContent,
@@ -41,6 +42,8 @@ import type { GeneticStrategyConfig } from "@/strategies/genetic";
 import { createGeneticStrategy, geneticStrategyConfigs } from "@/strategies/genetic";
 import { cloneGeneticConfigMap } from "@/strategies/genetic/utils";
 import { GeneticStrategyEditor } from "@/components/genetic/genetic-strategy-editor";
+import { createBasicEvolutionEngine } from "@/core/evolution";
+import type { EvolutionSettings, EvolutionSummary } from "@/core/evolution";
 
 type StrategyType = Strategy;
 
@@ -48,9 +51,15 @@ type DashboardProps = {
   availableStrategies: StrategyType[];
   geneticConfigs: Record<string, GeneticStrategyConfig>;
   onGeneticConfigsChange: (nextConfigs: Record<string, GeneticStrategyConfig>) => void;
+  evolutionEnabled: boolean;
+  onEvolutionEnabledChange: (enabled: boolean) => void;
+  evolutionSettings: EvolutionSettings;
+  onEvolutionSettingsChange: (settings: EvolutionSettings) => void;
+  evolutionSummary: EvolutionSummary | null;
+  isRunning: boolean;
   results: TournamentResult[] | null;
   swissRounds: SwissRoundSummary[] | null;
-  onRunTournament: () => void;
+  onRunTournament: () => Promise<void>;
   roundsPerMatch: number;
   onRoundsChange: (value: number) => void;
   noiseEnabled: boolean;
@@ -95,6 +104,12 @@ function TournamentDashboard({
   availableStrategies,
   geneticConfigs,
   onGeneticConfigsChange,
+  evolutionEnabled,
+  onEvolutionEnabledChange,
+  evolutionSettings,
+  onEvolutionSettingsChange,
+  evolutionSummary,
+  isRunning,
   results,
   swissRounds,
   onRunTournament,
@@ -152,6 +167,19 @@ function TournamentDashboard({
   }, [results, expandedStrategyName]);
 
   const champion = results?.[0] ?? null;
+
+  const updateEvolutionSetting = useCallback(
+    <K extends keyof EvolutionSettings>(key: K, value: EvolutionSettings[K]) => {
+      onEvolutionSettingsChange({
+        ...evolutionSettings,
+        [key]: value,
+      });
+    },
+    [evolutionSettings, onEvolutionSettingsChange],
+  );
+
+  const minParticipants = evolutionEnabled ? 1 : 2;
+  const bestEvolutionIndividual = evolutionSummary?.bestIndividual ?? null;
 
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
@@ -760,16 +788,200 @@ function TournamentDashboard({
             </TabsContent>
           </Tabs>
         </section>
+
+        <section className="space-y-4 rounded-lg border border-dashed border-muted p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-sm font-semibold uppercase text-muted-foreground">
+                Evolutionary mode
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Run genetic strategies through an evolutionary loop before the main tournament.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-muted-foreground">
+                {evolutionEnabled ? "Enabled" : "Disabled"}
+              </span>
+              <Switch
+                checked={evolutionEnabled}
+                onCheckedChange={onEvolutionEnabledChange}
+                aria-label="Toggle evolutionary mode"
+              />
+            </div>
+          </div>
+          {evolutionEnabled && (
+            <div className="space-y-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                  Population size
+                  <Input
+                    type="number"
+                    min={2}
+                    value={evolutionSettings.populationSize}
+                    onChange={(event) =>
+                      updateEvolutionSetting(
+                        "populationSize",
+                        Math.max(2, Number.parseInt(event.target.value, 10) || evolutionSettings.populationSize)
+                      )
+                    }
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                  Generations
+                  <Input
+                    type="number"
+                    min={1}
+                    value={evolutionSettings.generations}
+                    onChange={(event) =>
+                      updateEvolutionSetting(
+                        "generations",
+                        Math.max(1, Number.parseInt(event.target.value, 10) || evolutionSettings.generations)
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                  Mutation rate (0-1)
+                  <Input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step="0.01"
+                    value={evolutionSettings.mutationRate}
+                    onChange={(event) =>
+                      updateEvolutionSetting(
+                        "mutationRate",
+                        Math.min(Math.max(Number.parseFloat(event.target.value) || 0, 0), 1)
+                      )
+                    }
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                  Crossover rate (0-1)
+                  <Input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step="0.01"
+                    value={evolutionSettings.crossoverRate}
+                    onChange={(event) =>
+                      updateEvolutionSetting(
+                        "crossoverRate",
+                        Math.min(Math.max(Number.parseFloat(event.target.value) || 0, 0), 1)
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                  Selection method
+                  <select
+                    className="rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                    value={evolutionSettings.selectionMethod}
+                    onChange={(event) =>
+                      updateEvolutionSetting(
+                        "selectionMethod",
+                        event.target.value as EvolutionSettings["selectionMethod"]
+                      )
+                    }
+                  >
+                    <option value="tournament">Tournament</option>
+                    <option value="roulette-wheel">Roulette wheel</option>
+                    <option value="rank">Rank</option>
+                    <option value="elitist">Elitist</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                  Elitism count
+                  <Input
+                    type="number"
+                    min={0}
+                    value={evolutionSettings.elitismCount}
+                    onChange={(event) =>
+                      updateEvolutionSetting(
+                        "elitismCount",
+                        Math.max(0, Number.parseInt(event.target.value, 10) || evolutionSettings.elitismCount)
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              {evolutionSettings.selectionMethod === "tournament" && (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                    Tournament size
+                    <Input
+                      type="number"
+                      min={2}
+                      value={evolutionSettings.tournamentSize ?? 3}
+                      onChange={(event) =>
+                        updateEvolutionSetting(
+                          "tournamentSize",
+                          Math.max(2, Number.parseInt(event.target.value, 10) || evolutionSettings.tournamentSize || 2)
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+                    Random seed (optional)
+                    <Input
+                      value={evolutionSettings.randomSeed?.toString() ?? ""}
+                      onChange={(event) =>
+                        updateEvolutionSetting(
+                          "randomSeed",
+                          event.target.value.trim().length > 0 ? event.target.value.trim() : undefined
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              )}
+              {activeStrategyCount < minParticipants && (
+                <p className="text-xs text-destructive">
+                  Select at least {minParticipants} opponent{minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
+                </p>
+              )}
+            </div>
+          )}
+          {evolutionEnabled && evolutionSummary && (
+            <div className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+              <div className="flex items-center justify-between">
+                <span>Generations evaluated</span>
+                <span className="font-semibold text-foreground">{evolutionSummary.history.length}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Best fitness</span>
+                <span className="font-semibold text-foreground">
+                  {formatScore(evolutionSummary.history.at(-1)?.metrics.bestFitness ?? 0)}
+                </span>
+              </div>
+              {bestEvolutionIndividual && (
+                <div className="flex items-center justify-between">
+                  <span>Top individual</span>
+                  <span className="font-semibold text-foreground">{bestEvolutionIndividual.strategyName}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button
             size="lg"
-            onClick={onRunTournament}
+            onClick={() => void onRunTournament()}
             className="w-full sm:w-auto"
-            disabled={activeStrategyCount < 2}
+            disabled={isRunning || activeStrategyCount < minParticipants}
           >
-            <Play className="mr-2 h-4 w-4" />
-            Run Tournament
+            {!isRunning && <Play className="mr-2 h-4 w-4" />}
+            {isRunning
+              ? "Running..."
+              : evolutionEnabled
+              ? "Run Evolution + Tournament"
+              : "Run Tournament"}
           </Button>
         </CardFooter>
       </Card>
@@ -854,9 +1066,24 @@ export default function App() {
   );
   const [lastRunFormat, setLastRunFormat] = useState<TournamentFormat | null>(null);
   const [strategySearch, setStrategySearch] = useState("");
-  const [geneticConfigs, setGeneticConfigs] = useState<GeneticConfigMap>(() =>
-    cloneGeneticConfigMap(geneticStrategyConfigs)
-  );
+    const [geneticConfigs, setGeneticConfigs] = useState<GeneticConfigMap>(() =>
+      cloneGeneticConfigMap(geneticStrategyConfigs)
+    );
+    const [evolutionEnabled, setEvolutionEnabled] = useState(false);
+    const [evolutionSettings, setEvolutionSettings] = useState<EvolutionSettings>({
+      populationSize: 12,
+      generations: 5,
+      selectionMethod: "tournament",
+      mutationOperator: "per-gene",
+      crossoverOperator: "single-point",
+      mutationRate: 0.1,
+      crossoverRate: 0.7,
+      elitismCount: 1,
+      tournamentSize: 3,
+      randomSeed: undefined,
+    });
+    const [evolutionSummary, setEvolutionSummary] = useState<EvolutionSummary | null>(null);
+    const [isRunning, setIsRunning] = useState(false);
   const baseStrategyList = useMemo<StrategyType[]>(() => [...baseStrategies], []);
   const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>([]);
 
@@ -899,41 +1126,113 @@ export default function App() {
     [selectedStrategyNames, strategyMap]
   );
 
-  const runTournament = useCallback(() => {
-    if (activeStrategies.length < 2) return;
+    const runTournament = useCallback(async () => {
+      if (isRunning) return;
+      const minimumRequired = evolutionEnabled ? 1 : 2;
+      if (activeStrategies.length < minimumRequired) return;
 
-    const errorRate = noiseEnabled ? noisePercent / 100 : 0;
-    const seed =
-      seedEnabled && seedValue.trim().length > 0
-        ? seedValue.trim()
-        : undefined;
-    const outcome = simulateTournament({
-      rounds: roundsPerMatch,
-      errorRate,
+      setIsRunning(true);
+      try {
+        const errorRate = noiseEnabled ? noisePercent / 100 : 0;
+        const seed =
+          seedEnabled && seedValue.trim().length > 0
+            ? seedValue.trim()
+            : undefined;
+
+        if (evolutionEnabled) {
+          try {
+            const seedPool = Object.values(geneticConfigs);
+            if (seedPool.length > 0 && activeStrategies.length >= 1) {
+              const engine = createBasicEvolutionEngine({
+                settings: evolutionSettings,
+                seedPool,
+                opponents: activeStrategies,
+                fitness: {
+                  rounds: roundsPerMatch,
+                  errorRate,
+                  payoffMatrix,
+                  format: tournamentFormat,
+                },
+              });
+              const summary = await engine.run({});
+              setEvolutionSummary(summary);
+
+              const best =
+                summary.bestIndividual ?? summary.finalPopulation[0] ?? null;
+              if (best) {
+                const bestStrategy = createGeneticStrategy({
+                  ...best.config,
+                  name: best.strategyName,
+                });
+                const finalStrategies = [bestStrategy, ...activeStrategies];
+                const outcome = simulateTournament({
+                  rounds: roundsPerMatch,
+                  errorRate,
+                  payoffMatrix,
+                  seed,
+                  format: tournamentFormat,
+                  strategies: finalStrategies,
+                });
+                setTournamentOutcome(outcome);
+                setLastRunFormat(outcome.format);
+                return;
+              }
+            }
+          } catch (error) {
+            console.error("Evolution run failed:", error);
+          }
+        } else {
+          setEvolutionSummary(null);
+        }
+
+        const outcome = simulateTournament({
+          rounds: roundsPerMatch,
+          errorRate,
+          payoffMatrix,
+          seed,
+          format: tournamentFormat,
+          strategies: activeStrategies,
+        });
+        setTournamentOutcome(outcome);
+        setLastRunFormat(outcome.format);
+      } finally {
+        setIsRunning(false);
+      }
+    }, [
+      activeStrategies,
+      evolutionEnabled,
+      evolutionSettings,
+      geneticConfigs,
+      isRunning,
+      tournamentFormat,
+      noiseEnabled,
+      noisePercent,
       payoffMatrix,
-      seed,
-      format: tournamentFormat,
-      strategies: activeStrategies,
-    });
-    setTournamentOutcome(outcome);
-    setLastRunFormat(outcome.format);
-  }, [
-    activeStrategies,
-    tournamentFormat,
-    noiseEnabled,
-    noisePercent,
-    payoffMatrix,
-    roundsPerMatch,
-    seedEnabled,
-    seedValue,
-  ]);
+      roundsPerMatch,
+      seedEnabled,
+      seedValue,
+    ]);
 
-  const handleGeneticConfigsChange = useCallback(
-    (nextConfigs: GeneticConfigMap) => {
-      setGeneticConfigs(cloneGeneticConfigMap(nextConfigs));
-    },
-    []
-  );
+    const handleGeneticConfigsChange = useCallback(
+      (nextConfigs: GeneticConfigMap) => {
+        setGeneticConfigs(cloneGeneticConfigMap(nextConfigs));
+      },
+      []
+    );
+
+    const handleEvolutionSettingsChange = useCallback(
+      (nextSettings: EvolutionSettings) => {
+        setEvolutionSettings(nextSettings);
+        setEvolutionSummary(null);
+      },
+      []
+    );
+
+    useEffect(() => {
+      if (!evolutionEnabled) {
+        setEvolutionSummary(null);
+      }
+    }, [evolutionEnabled]);
 
   const handleEnterLab = useCallback(() => {
     if (isLandingFading) return;
@@ -1001,6 +1300,12 @@ export default function App() {
             availableStrategies={availableStrategies}
             geneticConfigs={geneticConfigs}
             onGeneticConfigsChange={handleGeneticConfigsChange}
+            evolutionEnabled={evolutionEnabled}
+            onEvolutionEnabledChange={setEvolutionEnabled}
+            evolutionSettings={evolutionSettings}
+            onEvolutionSettingsChange={handleEvolutionSettingsChange}
+            evolutionSummary={evolutionSummary}
+            isRunning={isRunning}
             results={results}
             swissRounds={swissRounds}
             onRunTournament={runTournament}
@@ -1036,6 +1341,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
