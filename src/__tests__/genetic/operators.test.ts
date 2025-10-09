@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Genome } from '@/strategies/genetic';
-import { mutateGenome, singlePointCrossover } from '@/strategies/genetic/operators';
+import {
+  mutateGenome,
+  singlePointCrossover,
+  twoPointCrossover,
+  uniformCrossover,
+  swapMutation,
+} from '@/strategies/genetic/operators';
 import { createSequenceRandom } from './utils/random';
 
 describe('mutateGenome', () => {
@@ -91,5 +97,86 @@ describe('singlePointCrossover', () => {
 
     expect(childA).toHaveLength(1);
     expect(childB).toHaveLength(1);
+  });
+});
+
+describe('twoPointCrossover', () => {
+  it('exchanges middle segments between parents', () => {
+    const left: Genome = [
+      { id: 'l-1', condition: {}, response: 'COOPERATE' },
+      { id: 'l-2', condition: {}, response: 'DEFECT' },
+      { id: 'l-3', condition: {}, response: 'COOPERATE' },
+      { id: 'l-4', condition: {}, response: 'DEFECT' },
+    ];
+
+    const right: Genome = [
+      { id: 'r-1', condition: {}, response: 'DEFECT' },
+      { id: 'r-2', condition: {}, response: 'COOPERATE' },
+      { id: 'r-3', condition: {}, response: 'DEFECT' },
+      { id: 'r-4', condition: {}, response: 'COOPERATE' },
+    ];
+
+    const random = createSequenceRandom([0.2, 0.8]); // cuts at 1 and 3
+    const [childA, childB] = twoPointCrossover(left, right, { random });
+
+    expect(childA).toEqual([
+      left[0],
+      right[1],
+      right[2],
+      left[3],
+    ]);
+
+    expect(childB).toEqual([
+      right[0],
+      left[1],
+      left[2],
+      right[3],
+    ]);
+  });
+});
+
+describe('uniformCrossover', () => {
+  it('swaps genes probabilistically across positions', () => {
+    const left: Genome = [
+      { id: 'l-1', condition: {}, response: 'COOPERATE' },
+      { id: 'l-2', condition: {}, response: 'DEFECT' },
+    ];
+    const right: Genome = [
+      { id: 'r-1', condition: {}, response: 'DEFECT' },
+      { id: 'r-2', condition: {}, response: 'COOPERATE' },
+    ];
+
+    const random = createSequenceRandom([0.9, 0.1]); // swap first, keep second
+    const [childA, childB] = uniformCrossover(left, right, { random });
+
+    expect(childA[0]).toEqual(right[0]);
+    expect(childB[0]).toEqual(left[0]);
+    expect(childA[1]).toEqual(left[1]);
+    expect(childB[1]).toEqual(right[1]);
+  });
+});
+
+describe('swapMutation', () => {
+  it('swaps two genes when triggered', () => {
+    const genome: Genome = [
+      { id: 'g-1', condition: {}, response: 'COOPERATE' },
+      { id: 'g-2', condition: {}, response: 'DEFECT' },
+      { id: 'g-3', condition: {}, response: 'COOPERATE' },
+    ];
+
+    const random = createSequenceRandom([0.4, 0.1, 0.7]); // trigger swap, pick indices 0 and 2
+    const mutated = swapMutation(genome, { mutationRate: 0.5, random });
+
+    expect(mutated.map((gene) => gene.id)).toEqual(['g-3', 'g-2', 'g-1']);
+  });
+
+  it('returns identical genome when swap does not trigger', () => {
+    const genome: Genome = [
+      { id: 'g-1', condition: {}, response: 'COOPERATE' },
+      { id: 'g-2', condition: {}, response: 'DEFECT' },
+    ];
+
+    const mutated = swapMutation(genome, { mutationRate: 0.1, random: () => 0.9 });
+    expect(mutated).toEqual(genome);
   });
 });

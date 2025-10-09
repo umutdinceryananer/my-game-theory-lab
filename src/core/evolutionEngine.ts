@@ -5,7 +5,13 @@ import type { PayoffMatrix, Strategy } from './types';
 import type { TournamentFormat } from './tournament';
 import { cloneGeneticConfig, ensureGeneIds } from '@/strategies/genetic/utils';
 import { createGeneticStrategy } from '@/strategies/genetic';
-import { mutateGenome as applyGenomeMutation, singlePointCrossover } from '@/strategies/genetic/operators';
+import {
+  mutateGenome as perGeneMutation,
+  singlePointCrossover,
+  twoPointCrossover,
+  uniformCrossover,
+  swapMutation,
+} from '@/strategies/genetic/operators';
 import type {
   EvolutionContext,
   EvolutionEngine,
@@ -69,7 +75,7 @@ export function createBasicEvolutionEngine({
         const genome = ensureGeneIds(baseConfig.genome);
         const mutatedGenome =
           this.settings.mutationRate > 0
-            ? applyGenomeMutation(genome, { mutationRate: this.settings.mutationRate / 2, random })
+            ? perGeneMutation(genome, { mutationRate: this.settings.mutationRate / 2, random })
             : genome;
         const config = {
           ...baseConfig,
@@ -258,9 +264,16 @@ export function createBasicEvolutionEngine({
 
       while (nextPopulation.length < this.settings.populationSize) {
         const parents = this.selectParents(sorted, random);
-        const offspringGenomes = this.crossoverGenomes(parents, random);
-        crossoverEvents += 1;
-        offspringGenomes.forEach((genome) => {
+        const crossoverRate = Math.min(Math.max(this.settings.crossoverRate ?? 1, 0), 1);
+        const canCrossover = crossoverRate > 0;
+        const shouldCrossover = canCrossover && random() < crossoverRate;
+        const offspringGenomes = shouldCrossover
+          ? this.crossoverGenomes(parents, random)
+          : parents.map((parent) => ensureGeneIds(parent.genome));
+        if (shouldCrossover) {
+          crossoverEvents += 1;
+        }
+        offspringGenomes.forEach((genome, index) => {
           if (nextPopulation.length >= this.settings.populationSize) return;
           const { genome: mutatedGenome, mutated } = this.applyMutation(genome, random);
           if (mutated) {
@@ -332,7 +345,12 @@ export function createBasicEvolutionEngine({
       population: PopulationIndividual[],
       random: () => number,
     ): PopulationIndividual {
-      const size = Math.max(this.settings.tournamentSize ?? 3, 2);
+      const populationSize = population.length;
+      if (populationSize === 0) {
+        throw new Error('Cannot perform tournament selection on an empty population.');
+      }
+      const requestedSize = Math.max(this.settings.tournamentSize ?? 3, 2);
+      const size = Math.min(populationSize, requestedSize);
       const competitors = new Set<PopulationIndividual>();
       while (competitors.size < size) {
         const candidate = population[Math.floor(random() * population.length)];
@@ -346,12 +364,25 @@ export function createBasicEvolutionEngine({
       }, null)!;
     }
 
-    private crossoverGenomes(
-      parents: PopulationIndividual[],
-      random: () => number,
-    ): Genome[] {
+    private crossoverGenomes(parents: PopulationIndividual[], random: () => number): Genome[] {
       const [parentA, parentB] = parents;
       switch (this.settings.crossoverOperator) {
+        case 'two-point': {
+          const [childAGenome, childBGenome] = twoPointCrossover(parentA.genome, parentB.genome, { random });
+          this.hooks?.onCrossoverApplied?.(parents, [
+            { ...parentA, genome: childAGenome },
+            { ...parentB, genome: childBGenome },
+          ]);
+          return [childAGenome, childBGenome];
+        }
+        case 'uniform': {
+          const [childAGenome, childBGenome] = uniformCrossover(parentA.genome, parentB.genome, { random });
+          this.hooks?.onCrossoverApplied?.(parents, [
+            { ...parentA, genome: childAGenome },
+            { ...parentB, genome: childBGenome },
+          ]);
+          return [childAGenome, childBGenome];
+        }
         case 'single-point':
         default: {
           const [childAGenome, childBGenome] = singlePointCrossover(parentA.genome, parentB.genome, { random });
@@ -372,10 +403,21 @@ export function createBasicEvolutionEngine({
       if (this.settings.mutationRate <= 0) {
         return { genome: normalized, mutated: false };
       }
-      const mutatedGenome = applyGenomeMutation(normalized, {
-        mutationRate: this.settings.mutationRate,
-        random,
-      });
+      const mutationRate = Math.min(Math.max(this.settings.mutationRate ?? 0, 0), 1);
+      let mutatedGenome: Genome;
+      switch (this.settings.mutationOperator) {
+        case 'swap':
+          mutatedGenome = swapMutation(normalized, { mutationRate, random });
+          break;
+        case 'per-bit':
+        case 'per-gene':
+        default:
+          mutatedGenome = perGeneMutation(normalized, {
+            mutationRate,
+            random,
+          });
+          break;
+      }
       const mutated = !this.genomesAreEqual(normalized, mutatedGenome);
       return { genome: mutatedGenome, mutated };
     }
