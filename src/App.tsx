@@ -1,27 +1,10 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, Dna, Menu, Play, Trophy, X } from "lucide-react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Dna, Menu, X } from "lucide-react";
 
 import { LandingScreen } from "@/components/landing-screen";
 import { SimulationParametersPanel } from "@/components/panels/simulation-parameters";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix, type Strategy } from "@/core/types";
 import { cn } from "@/lib/utils";
@@ -30,16 +13,14 @@ import {
   type TournamentFormat,
   type TournamentOutcome,
   type TournamentResult,
-  type SwissRoundSummary,
 } from "@/core/tournament";
 import { simulateTournament } from "@/test-game";
 import { baseStrategies } from "@/strategies";
 import { StrategyInfoBadge } from "@/components/strategy-info";
-import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
-import { EvolutionSummaryCard } from "@/components/analytics/evolution-summary";
 import { useEvolutionAnalytics } from "@/hooks/useEvolutionAnalytics";
-import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EvolutionToggleCard } from "@/components/evolution/evolution-toggle-card";
+import { EvolutionConfigPanel } from "@/components/evolution/evolution-config-panel";
+import { EvolutionInsights } from "@/components/evolution/evolution-insights";
 import type { GeneticStrategyConfig } from "@/strategies/genetic";
 import { createGeneticStrategy, geneticStrategyConfigs } from "@/strategies/genetic";
 import { cloneGeneticConfigMap } from "@/strategies/genetic/utils";
@@ -62,7 +43,6 @@ type DashboardProps = {
   evolutionSummary: EvolutionSummary | null;
   isRunning: boolean;
   results: TournamentResult[] | null;
-  swissRounds: SwissRoundSummary[] | null;
   onRunTournament: () => Promise<void>;
   roundsPerMatch: number;
   onRoundsChange: (value: number) => void;
@@ -76,7 +56,6 @@ type DashboardProps = {
   seedValue: string;
   onSeedToggle: (enabled: boolean) => void;
   onSeedChange: (value: string) => void;
-  lastRunFormat: TournamentFormat | null;
   tournamentFormat: TournamentFormat;
   onTournamentFormatChange: (format: TournamentFormat) => void;
   strategySearch: string;
@@ -147,7 +126,6 @@ function TournamentDashboard({
   evolutionSummary,
   isRunning,
   results,
-  swissRounds,
   onRunTournament,
   roundsPerMatch,
   onRoundsChange,
@@ -161,7 +139,6 @@ function TournamentDashboard({
   seedValue,
   onSeedToggle,
   onSeedChange,
-  lastRunFormat,
   tournamentFormat,
   onTournamentFormatChange,
   strategySearch,
@@ -177,12 +154,8 @@ function TournamentDashboard({
   const [isVisible, setIsVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [geneticEditorOpen, setGeneticEditorOpen] = useState(false);
-  const { getSummary } = useTournamentAnalytics(results);
+  const [evolutionConfigCollapsed, setEvolutionConfigCollapsed] = useState(true);
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
-  const [roundsExpanded, setRoundsExpanded] = useState(false);
-  const [activeInsightsPanel, setActiveInsightsPanel] = useState<"standings" | "heatmap">(
-    "standings",
-  );
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsVisible(true));
@@ -201,40 +174,13 @@ function TournamentDashboard({
       setExpandedStrategyName(results[0].name);
     }
   }, [results, expandedStrategyName]);
-
-  const champion = results?.[0] ?? null;
-
-  const updateEvolutionSetting = useCallback(
-    <K extends keyof EvolutionSettings>(key: K, value: EvolutionSettings[K]) => {
-      onEvolutionSettingsChange({
-        ...evolutionSettings,
-        [key]: value,
-      });
-    },
-    [evolutionSettings, onEvolutionSettingsChange],
-  );
-
   const minParticipants = evolutionEnabled ? 1 : 2;
   const evolutionAnalytics = useEvolutionAnalytics(evolutionSummary);
   const evolutionSettingsErrors = useMemo(
     () => (evolutionEnabled ? getEvolutionSettingsIssues(evolutionSettings) : []),
     [evolutionEnabled, evolutionSettings],
-  );
-  const elitismInvalid =
-    evolutionEnabled && (evolutionSettings.elitismCount >= evolutionSettings.populationSize || evolutionSettings.elitismCount < 0);
-  const tournamentSizeValue = evolutionSettings.tournamentSize ?? 3;
-  const tournamentSizeInvalid =
-    evolutionEnabled &&
-    evolutionSettings.selectionMethod === "tournament" &&
-    (tournamentSizeValue > evolutionSettings.populationSize || tournamentSizeValue < 2);
-  const geneticSeedOptions = useMemo(
-    () =>
-      Object.values(geneticConfigs)
-        .map((config) => ({
-          ...config,
-          geneCount: config.genome.length,
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name)),
+  );  const geneticSeedOptions = useMemo(
+    () => Object.values(geneticConfigs).sort((a, b) => a.name.localeCompare(b.name)),
     [geneticConfigs],
   );
   const selectedSeedConfigs = useMemo(
@@ -306,55 +252,14 @@ function TournamentDashboard({
     });
   }, [availableStrategies, selectedStrategyNames, strategySearch]);
 
-  const totalMatches =
-    filteredSelectedStrategies.length + filteredAvailableStrategies.length;
+  const totalMatches = filteredSelectedStrategies.length + filteredAvailableStrategies.length;
   const hasSearch = strategySearch.trim().length > 0;
-
-  const effectiveFormat = useMemo(
-    () => (results ? lastRunFormat ?? tournamentFormat : tournamentFormat),
-    [lastRunFormat, results, tournamentFormat],
-  );
-
-  const formatLabel = useMemo(() => {
-    switch (effectiveFormat.kind) {
-      case 'single-round-robin':
-        return 'Single round-robin';
-      case 'double-round-robin':
-        return 'Double round-robin';
-      case 'swiss': {
-        const participants = Math.max(2, activeStrategyCount || 0);
-        const defaultRounds = Math.max(1, Math.ceil(Math.log2(participants)) + 1);
-        const inferredRounds =
-          results && results.length > 0
-            ? Math.max(...results.map((result) => result.matchesPlayed))
-            : undefined;
-        const roundCount = effectiveFormat.rounds ?? inferredRounds ?? defaultRounds;
-        return `Swiss pairing - ${roundCount} round${roundCount === 1 ? '' : 's'}`;
-      }
-      default:
-        return 'Custom format';
-    }
-  }, [activeStrategyCount, effectiveFormat, results]);
-
-  const swissTieBreaker =
-    effectiveFormat.kind === 'swiss' ? effectiveFormat.tieBreaker ?? 'total-score' : null;
-
-  const formatScore = useCallback(
-    (value: number) => (Number.isInteger(value) ? value.toString() : value.toFixed(2)),
-    [],
-  );
-
-  useEffect(() => {
-    setRoundsExpanded(false);
-  }, [swissRounds?.length ?? 0, effectiveFormat.kind]);
-
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
-
   useEffect(() => {
-    if (activeInsightsPanel !== "standings") {
-      setRoundsExpanded(false);
+    if (evolutionEnabled) {
+      setEvolutionConfigCollapsed(false);
     }
-  }, [activeInsightsPanel]);
+  }, [evolutionEnabled]);
 
   const handleDragStart = useCallback(
     (
@@ -437,7 +342,7 @@ function TournamentDashboard({
       (event: React.DragEvent<HTMLDivElement>) => {
         handleDragStart(event, strategy.name, isSelected ? "selected" : "available");
       },
-      [isSelected, strategy.name] // handleDragStart bağımlılığını koru
+      [isSelected, strategy.name] // handleDragStart baÄŸÄ±mlÄ±lÄ±ÄŸÄ±nÄ± koru
     );
 
     const handleDragEnd = useCallback(() => {
@@ -653,538 +558,36 @@ function TournamentDashboard({
           </div>
         </section>
 
-        <section className="space-y-4 rounded-lg border border-dashed border-muted p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold uppercase text-muted-foreground">
-                Tournament insights
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Compare leaderboard rankings or dive into head-to-head trends without leaving the dashboard.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="outline">
-                {formatLabel}
-              </Badge>
-              {champion ? (
-                <Badge variant="secondary" className="flex items-center gap-1">
-                  <Trophy className="h-3.5 w-3.5" />
-                  {champion.name}
-                </Badge>
-              ) : (
-                <Badge variant="outline">Run to populate</Badge>
-              )}
-            </div>
-          </div>
-
-          <Tabs
-            value={activeInsightsPanel}
-            onValueChange={(value) => setActiveInsightsPanel(value as "standings" | "heatmap")}
-            className="w-full"
-          >
-            <TabsList className="mb-4 w-full max-w-full justify-start gap-2 overflow-x-auto">
-              <TabsTrigger value="standings" className="whitespace-nowrap px-4">
-                Standings overview
-              </TabsTrigger>
-              <TabsTrigger value="heatmap" className="whitespace-nowrap px-4">
-                H2H heat map
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="standings">
-              <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
-                {results ? (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-28">Rank</TableHead>
-                          <TableHead>Strategy</TableHead>
-                          <TableHead className="w-24 text-right">Score</TableHead>
-                          <TableHead className="w-24 text-right">Average</TableHead>
-                          <TableHead className="w-20 text-right">Wins</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {results.map((result, index) => {
-                          const isExpanded = result.name === expandedStrategyName;
-                          const summary = getSummary(result.name);
-
-                          const renderBaseRow = () => (
-                            <TableRow
-                              key={`${result.name}-base`}
-                              data-state={isExpanded ? "selected" : undefined}
-                              className={cn(
-                                "cursor-pointer transition-colors duration-300 ease-out",
-                                isExpanded
-                                  ? "bg-muted/60 shadow-inner"
-                                  : "hover:bg-muted/40"
-                              )}
-                              onClick={() => setExpandedStrategyName(result.name)}
-                              onFocus={() => setExpandedStrategyName(result.name)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === " ") {
-                                  event.preventDefault();
-                                  setExpandedStrategyName(result.name);
-                                }
-                              }}
-                              tabIndex={0}
-                              aria-selected={isExpanded}
-                            >
-                              <TableCell className="font-medium transition-colors duration-300">
-                                #{index + 1}
-                              </TableCell>
-                              <TableCell
-                                className={cn(
-                                  "text-sm transition-colors duration-300",
-                                  index === 0 && "font-semibold text-foreground",
-                                  isExpanded && "font-semibold text-foreground"
-                                )}
-                              >
-                                {result.name}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-sm transition-colors duration-300">
-                                {result.totalScore}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-sm transition-colors duration-300">
-                                {result.averageScore.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-right font-mono text-sm transition-colors duration-300">
-                                {result.wins}
-                              </TableCell>
-                            </TableRow>
-                          );
-
-                          if (!summary) {
-                            return renderBaseRow();
-                          }
-
-                          if (!isExpanded) {
-                            return renderBaseRow();
-                          }
-
-                          return (
-                            <Fragment key={result.name}>
-                              {renderBaseRow()}
-                              <TableRow
-                                key={`${result.name}-summary`}
-                                data-variant="summary"
-                                className="bg-muted/30"
-                              >
-                                <TableCell colSpan={5} className="p-0">
-                                  <div className="summary-fade px-4 py-3">
-                                    <StrategySummaryInlineCard summary={summary} rank={index + 1} />
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            </Fragment>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Run a tournament to populate the standings table.
-                  </p>
-                )}
-
-                {effectiveFormat.kind === "swiss" && swissRounds && swissRounds.length > 0 && (
-                  <div className="rounded-md border border-dashed border-muted p-3">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="flex w-full items-center justify-between px-2 py-1 text-sm font-semibold"
-                      onClick={() => setRoundsExpanded((prev) => !prev)}
-                    >
-                      <span>Swiss round breakdown</span>
-                      <ChevronDown
-                        className={cn(
-                          "h-4 w-4 transition-transform",
-                          roundsExpanded ? "rotate-180" : "rotate-0",
-                        )}
-                      />
-                    </Button>
-                    {roundsExpanded && (
-                      <div className="mt-3 space-y-4">
-                        {swissRounds.map((round) => (
-                          <div
-                            key={round.round}
-                            className="space-y-2 rounded-md border border-muted bg-muted/10 p-3"
-                          >
-                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                              <span className="text-sm font-semibold">Round {round.round}</span>
-                              {round.leaderboard[0] ? (
-                                <span className="text-xs text-muted-foreground">
-                                  Leader: {round.leaderboard[0].name} ({formatScore(round.leaderboard[0].totalScore)} pts)
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="space-y-2">
-                              {round.matches.map((match, index) => (
-                                <div
-                                  key={`${round.round}-${match.player}-${match.opponent}-${index}`}
-                                  className="flex flex-col gap-1 rounded border border-dashed border-muted bg-background/80 p-2 text-xs sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                  <span className="font-medium">
-                                    {match.player} vs {match.opponent}
-                                  </span>
-                                  <span className="text-muted-foreground">
-                                    {formatScore(match.playerScore)} - {formatScore(match.opponentScore)}{" "}
-                                    {match.winner === "draw"
-                                      ? "(draw)"
-                                      : `(${match.winner === "player" ? match.player : match.opponent} win)`}
-                                  </span>
-                                </div>
-                              ))}
-                              {round.matches.length === 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                  No pairings were recorded for this round.
-                                </p>
-                              )}
-                            </div>
-                            {round.byes.length > 0 && (
-                              <div className="text-xs text-muted-foreground">
-                                Bye:{" "}
-                                {round.byes
-                                  .map((bye) => `${bye.player} (+${formatScore(bye.awardedScore)})`)
-                                  .join(", ")}
-                              </div>
-                            )}
-                            <div className="space-y-1">
-                              <p className="text-xs text-muted-foreground uppercase font-semibold">
-                                Top five snapshot
-                              </p>
-                              <ul className="space-y-1 text-xs text-muted-foreground">
-                                {round.leaderboard.slice(0, 5).map((entry, index) => {
-                                  const tieDetail =
-                                    swissTieBreaker === "buchholz" && typeof entry.buchholz === "number"
-                                      ? " - Buchholz " + formatScore(entry.buchholz)
-                                      : swissTieBreaker === "sonneborn-berger" &&
-                                        typeof entry.sonnebornBerger === "number"
-                                      ? " - Sonneborn-Berger " + formatScore(entry.sonnebornBerger)
-                                      : "";
-                                  return (
-                                    <li key={`${round.round}-leader-${entry.name}`}>
-                                      {index + 1}. {entry.name} - {formatScore(entry.totalScore)} pts - {entry.wins} wins
-                                      {tieDetail}
-                                    </li>
-                                  );
-                                })}
-                              </ul>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-            <TabsContent value="heatmap">
-              <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
-                <HeadToHeadHeatMap results={results} />
-              </div>
-            </TabsContent>
-          </Tabs>
-        </section>
-
-        <section className="space-y-4 rounded-lg border border-dashed border-muted p-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-semibold uppercase text-muted-foreground">
-                Evolutionary mode
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                Run genetic strategies through an evolutionary loop before the main tournament.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-muted-foreground">
-                {evolutionEnabled ? "Enabled" : "Disabled"}
-              </span>
-              <Switch
-                checked={evolutionEnabled}
-                onCheckedChange={onEvolutionEnabledChange}
-                aria-label="Toggle evolutionary mode"
-              />
-            </div>
-          </div>
-          {evolutionEnabled && (
-            <div className="space-y-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                  Population size
-                  <Input
-                    type="number"
-                    min={2}
-                    value={evolutionSettings.populationSize}
-                    onChange={(event) =>
-                      updateEvolutionSetting(
-                        "populationSize",
-                        Math.max(2, Number.parseInt(event.target.value, 10) || evolutionSettings.populationSize)
-                      )
-                    }
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                  Generations
-                  <Input
-                    type="number"
-                    min={1}
-                    value={evolutionSettings.generations}
-                    onChange={(event) =>
-                      updateEvolutionSetting(
-                        "generations",
-                        Math.max(1, Number.parseInt(event.target.value, 10) || evolutionSettings.generations)
-                      )
-                    }
-                  />
-                </label>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                  Mutation rate (0-1)
-                  <Input
-                    type="number"
-                    min={0}
-                    max={1}
-                    step="0.01"
-                    value={evolutionSettings.mutationRate}
-                    onChange={(event) =>
-                      updateEvolutionSetting(
-                        "mutationRate",
-                        Math.min(Math.max(Number.parseFloat(event.target.value) || 0, 0), 1)
-                      )
-                    }
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                  Crossover rate (0-1)
-                  <Input
-                    type="number"
-                    min={0}
-                    max={1}
-                    step="0.01"
-                    value={evolutionSettings.crossoverRate}
-                    onChange={(event) =>
-                      updateEvolutionSetting(
-                        "crossoverRate",
-                        Math.min(Math.max(Number.parseFloat(event.target.value) || 0, 0), 1)
-                      )
-                    }
-                  />
-                </label>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                  Selection method
-                  <select
-                    className="rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-                    value={evolutionSettings.selectionMethod}
-                    onChange={(event) =>
-                      updateEvolutionSetting(
-                        "selectionMethod",
-                        event.target.value as EvolutionSettings["selectionMethod"]
-                      )
-                    }
-                  >
-                    <option value="tournament">Tournament</option>
-                    <option value="roulette-wheel">Roulette wheel</option>
-                    <option value="rank">Rank</option>
-                    <option value="elitist">Elitist</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                  Elitism count
-                  <Input
-                    type="number"
-                    min={0}
-                    value={evolutionSettings.elitismCount}
-                    aria-invalid={elitismInvalid}
-                    className={cn(
-                      elitismInvalid && "border-destructive focus-visible:ring-destructive focus-visible:ring-1"
-                    )}
-                    onChange={(event) =>
-                      updateEvolutionSetting(
-                        "elitismCount",
-                        Math.max(0, Number.parseInt(event.target.value, 10) || evolutionSettings.elitismCount)
-                      )
-                    }
-                  />
-                  <div className="space-y-1">
-                    <p className="text-[0.65rem] text-muted-foreground">
-                      Preserve top performers each generation (must be less than population size).
-                    </p>
-                    {elitismInvalid && (
-                      <p className="text-[0.65rem] text-destructive">Elitism count must be lower than population size.</p>
-                    )}
-                  </div>
-                </label>
-              </div>
-              {evolutionSettings.selectionMethod === "tournament" && (
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                    Tournament size
-                    <Input
-                      type="number"
-                      min={2}
-                      value={tournamentSizeValue}
-                      aria-invalid={tournamentSizeInvalid}
-                      className={cn(
-                        tournamentSizeInvalid && "border-destructive focus-visible:ring-destructive focus-visible:ring-1"
-                      )}
-                      onChange={(event) =>
-                        updateEvolutionSetting(
-                          "tournamentSize",
-                          Math.max(2, Number.parseInt(event.target.value, 10) || evolutionSettings.tournamentSize || 2)
-                        )
-                      }
-                    />
-                    <div className="space-y-1">
-                      <p className="text-[0.65rem] text-muted-foreground">
-                        Number of contenders sampled per selection (cannot exceed population size).
-                      </p>
-                      {tournamentSizeInvalid && (
-                        <p className="text-[0.65rem] text-destructive">Tournament size cannot exceed population size.</p>
-                      )}
-                    </div>
-                  </label>
-                  <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-                    Random seed (optional)
-                    <Input
-                      value={evolutionSettings.randomSeed?.toString() ?? ""}
-                      onChange={(event) =>
-                        updateEvolutionSetting(
-                          "randomSeed",
-                          event.target.value.trim().length > 0 ? event.target.value.trim() : undefined
-                        )
-                      }
-                    />
-                  </label>
-                </div>
-              )}
-              <div className="space-y-2 rounded-md border border-muted/50 bg-muted/10 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">
-                    Seed pool ({selectedSeedConfigs.length}/{geneticSeedOptions.length})
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="px-2 py-1"
-                      onClick={handleSelectAllSeeds}
-                      disabled={
-                        geneticSeedOptions.length === 0 ||
-                        evolutionSeedNames.length === geneticSeedOptions.length
-                      }
-                    >
-                      Select all
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="px-2 py-1"
-                      onClick={handleClearSeeds}
-                      disabled={evolutionSeedNames.length === 0}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Choose which genetic configurations seed the evolutionary population. Seeds are cloned
-                  and mutated when the run starts.
-                </p>
-                <div className="space-y-2">
-                  {geneticSeedOptions.map((config) => {
-                    const checked = evolutionSeedNames.includes(config.name);
-                    return (
-                      <label
-                        key={config.name}
-                        className={cn(
-                          "flex cursor-pointer items-start gap-3 rounded-md border border-transparent p-2 text-xs transition-colors",
-                          checked ? "border-primary/40 bg-primary/10" : "hover:border-muted-foreground/20 hover:bg-muted/40"
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-1 h-3.5 w-3.5 accent-primary"
-                          checked={checked}
-                          onChange={() => handleSeedToggle(config.name)}
-                        />
-                        <div className="space-y-1">
-                          <p className="font-medium text-foreground">{config.name}</p>
-                          <p className="text-[0.7rem] text-muted-foreground">{config.description}</p>
-                          <div className="flex flex-wrap items-center gap-2 text-[0.65rem] text-muted-foreground">
-                            <span>
-                              {config.geneCount} {config.geneCount === 1 ? "gene" : "genes"}
-                            </span>
-                            {typeof config.mutationRate === "number" && (
-                              <Badge variant="outline" className="text-[0.65rem]">
-                                μ {config.mutationRate.toFixed(2)}
-                              </Badge>
-                            )}
-                            {typeof config.crossoverRate === "number" && (
-                              <Badge variant="outline" className="text-[0.65rem]">
-                                χ {config.crossoverRate.toFixed(2)}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </label>
-                    );
-                  })}
-                  {geneticSeedOptions.length === 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      No genetic configurations available. Open the genetic editor to add seed strategies.
-                    </p>
-                  )}
-                </div>
-              </div>
-              {activeStrategyCount < minParticipants && (
-                <p className="text-xs text-destructive">
-                  Select at least {minParticipants} opponent{minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
-                </p>
-              )}
-              {evolutionConfigurationErrors.length > 0 && (
-                <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-                  <p className="font-semibold">Evolution settings need attention:</p>
-                  <ul className="mt-2 space-y-1 list-disc pl-4 text-destructive">
-                    {evolutionConfigurationErrors.map((issue) => (
-                      <li key={issue}>{issue}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-          {evolutionEnabled && <EvolutionSummaryCard data={evolutionAnalytics} />}
-        </section>
+        <div className="space-y-4 rounded-lg border border-dashed border-muted p-4">
+          <EvolutionToggleCard
+            enabled={evolutionEnabled}
+            onToggle={onEvolutionEnabledChange}
+            toggleDisabled={isRunning}
+            runDisabled={evolutionEnabled && evolutionConfigurationErrors.length > 0}
+            isRunning={isRunning}
+            onRun={() => void onRunTournament()}
+            minParticipants={minParticipants}
+            activeStrategyCount={activeStrategyCount}
+          />
+          <EvolutionConfigPanel
+            settings={evolutionSettings}
+            onSettingsChange={onEvolutionSettingsChange}
+            seedOptions={geneticSeedOptions}
+            selectedSeedNames={evolutionSeedNames}
+            onSeedToggle={handleSeedToggle}
+            onSeedSelectAll={handleSelectAllSeeds}
+            onSeedClear={handleClearSeeds}
+            collapsed={evolutionConfigCollapsed}
+            onToggleCollapse={() => setEvolutionConfigCollapsed((previous) => !previous)}
+            errors={evolutionConfigurationErrors}
+          />
+          <EvolutionInsights
+            analytics={evolutionAnalytics}
+            roundsPerMatch={roundsPerMatch}
+            enabled={evolutionEnabled}
+          />
+        </div>
         </CardContent>
-        <CardFooter className="flex justify-end">
-          <Button
-            size="lg"
-            onClick={() => void onRunTournament()}
-            className="w-full sm:w-auto"
-            disabled={
-              isRunning ||
-              activeStrategyCount < minParticipants ||
-              (evolutionEnabled && evolutionConfigurationErrors.length > 0)
-            }
-          >
-            {!isRunning && <Play className="mr-2 h-4 w-4" />}
-            {isRunning
-              ? "Running..."
-              : evolutionEnabled
-              ? "Run Evolution + Tournament"
-              : "Run Tournament"}
-          </Button>
-        </CardFooter>
       </Card>
 
       {geneticEditorOpen && (
@@ -1265,7 +668,7 @@ export default function App() {
   const [tournamentFormat, setTournamentFormat] = useState<TournamentFormat>(
     DEFAULT_TOURNAMENT_FORMAT,
   );
-  const [lastRunFormat, setLastRunFormat] = useState<TournamentFormat | null>(null);
+  const [, setLastRunFormat] = useState<TournamentFormat | null>(null);
   const [strategySearch, setStrategySearch] = useState("");
     const [geneticConfigs, setGeneticConfigs] = useState<GeneticConfigMap>(() =>
       cloneGeneticConfigMap(geneticStrategyConfigs)
@@ -1292,8 +695,6 @@ export default function App() {
   const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>([]);
 
   const results = tournamentOutcome?.results ?? null;
-  const swissRounds = tournamentOutcome?.swissRounds ?? null;
-
   const availableStrategies = useMemo(
     () => buildStrategies(baseStrategyList, geneticConfigs),
     [baseStrategyList, geneticConfigs],
@@ -1551,9 +952,7 @@ export default function App() {
             onEvolutionSeedsChange={handleEvolutionSeedsChange}
             evolutionSummary={evolutionSummary}
             isRunning={isRunning}
-            results={results}
-            swissRounds={swissRounds}
-            onRunTournament={runTournament}
+            results={results}            onRunTournament={runTournament}
             roundsPerMatch={roundsPerMatch}
             onRoundsChange={setRoundsPerMatch}
             noiseEnabled={noiseEnabled}
@@ -1565,9 +964,7 @@ export default function App() {
             seedEnabled={seedEnabled}
             seedValue={seedValue}
             onSeedToggle={setSeedEnabled}
-            onSeedChange={setSeedValue}
-            lastRunFormat={lastRunFormat}
-            tournamentFormat={tournamentFormat}
+            onSeedChange={setSeedValue}            tournamentFormat={tournamentFormat}
             onTournamentFormatChange={setTournamentFormat}
             strategySearch={strategySearch}
             onStrategySearch={setStrategySearch}
@@ -1586,6 +983,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 
