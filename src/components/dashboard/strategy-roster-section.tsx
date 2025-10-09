@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Dna, Play } from "lucide-react";
+import { Dna, Info, Play } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,7 +175,7 @@ export function StrategyRosterSection({
             {geneticConfig ? (
               <Dna className="h-4 w-4" aria-hidden="true" />
             ) : (
-              <span className="font-semibold">{strategy.name.slice(0, 2).toUpperCase()}</span>
+              <Info className="h-4 w-4" aria-hidden="true" />
             )}
           </StrategyInfoBadge>
           <p className="max-w-[16rem] truncate text-left text-sm font-medium leading-tight md:max-w-xs">

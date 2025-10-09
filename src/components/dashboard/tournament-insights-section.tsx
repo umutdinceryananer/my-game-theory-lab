@@ -38,6 +38,7 @@ export function TournamentInsightsSection({
 
   const { getSummary } = useTournamentAnalytics(results);
 
+  const hasResults = Boolean(results && results.length > 0);
   const champion = results?.[0] ?? null;
   const effectiveFormat = useMemo(
     () => (results ? lastRunFormat ?? tournamentFormat : tournamentFormat),
@@ -97,6 +98,12 @@ export function TournamentInsightsSection({
     }
   }, [activeInsightsPanel]);
 
+  useEffect(() => {
+    if (!hasResults) {
+      setActiveInsightsPanel("standings");
+    }
+  }, [hasResults]);
+
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -133,183 +140,193 @@ export function TournamentInsightsSection({
           <TabsTrigger value="standings" className="whitespace-nowrap px-4">
             Standings overview
           </TabsTrigger>
-          <TabsTrigger value="heatmap" className="whitespace-nowrap px-4">
+          <TabsTrigger value="heatmap" className="whitespace-nowrap px-4" disabled={!hasResults}>
             H2H heat map
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="standings">
-          <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
-            {results ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-28">Rank</TableHead>
-                      <TableHead>Strategy</TableHead>
-                      <TableHead className="w-24 text-right">Score</TableHead>
-                      <TableHead className="w-24 text-right">Average</TableHead>
-                      <TableHead className="w-20 text-right">Wins</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((result, index) => {
-                      const isExpanded = result.name === expandedStrategyName;
-                      const summary = getSummary(result.name);
+          {hasResults ? (
+            <>
+              <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-28">Rank</TableHead>
+                        <TableHead>Strategy</TableHead>
+                        <TableHead className="w-24 text-right">Score</TableHead>
+                        <TableHead className="w-24 text-right">Average</TableHead>
+                        <TableHead className="w-20 text-right">Wins</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {results.map((result, index) => {
+                        const isExpanded = result.name === expandedStrategyName;
+                        const summary = getSummary(result.name);
 
-                      const renderBaseRow = () => (
-                        <TableRow
-                          key={`${result.name}-base`}
-                          data-state={isExpanded ? "selected" : undefined}
-                          className={cn(
-                            "cursor-pointer transition-colors duration-300 ease-out",
-                            isExpanded ? "bg-muted/60 shadow-inner" : "hover:bg-muted/40",
-                          )}
-                          onClick={() => setExpandedStrategyName(result.name)}
-                          onFocus={() => setExpandedStrategyName(result.name)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setExpandedStrategyName(result.name);
-                            }
-                          }}
-                          tabIndex={0}
-                          aria-selected={isExpanded}
-                        >
-                          <TableCell className="font-medium transition-colors duration-300">
-                            #{index + 1}
-                          </TableCell>
-                          <TableCell
+                        const renderBaseRow = () => (
+                          <TableRow
+                            key={`${result.name}-base`}
+                            data-state={isExpanded ? "selected" : undefined}
                             className={cn(
-                              "text-sm transition-colors duration-300",
-                              index === 0 && "font-semibold text-foreground",
-                              isExpanded && "font-semibold text-foreground",
+                              "cursor-pointer transition-colors duration-300 ease-out",
+                              isExpanded ? "bg-muted/60 shadow-inner" : "hover:bg-muted/40",
                             )}
+                            onClick={() => setExpandedStrategyName(result.name)}
+                            onFocus={() => setExpandedStrategyName(result.name)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setExpandedStrategyName(result.name);
+                              }
+                            }}
+                            tabIndex={0}
+                            aria-selected={isExpanded}
                           >
-                            {result.name}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm transition-colors duration-300">
-                            {result.totalScore}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm transition-colors duration-300">
-                            {result.averageScore.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-sm transition-colors duration-300">
-                            {result.wins}
-                          </TableCell>
-                        </TableRow>
-                      );
-
-                      if (!summary || !isExpanded) {
-                        return renderBaseRow();
-                      }
-
-                      return (
-                        <Fragment key={result.name}>
-                          {renderBaseRow()}
-                          <TableRow key={`${result.name}-summary`} data-variant="summary" className="bg-muted/30">
-                            <TableCell colSpan={5} className="p-0">
-                              <div className="summary-fade px-4 py-3">
-                                <StrategySummaryInlineCard summary={summary} rank={index + 1} />
-                              </div>
+                            <TableCell className="font-medium transition-colors duration-300">
+                              #{index + 1}
+                            </TableCell>
+                            <TableCell
+                              className={cn(
+                                "text-sm transition-colors duration-300",
+                                index === 0 && "font-semibold text-foreground",
+                                isExpanded && "font-semibold text-foreground",
+                              )}
+                            >
+                              {result.name}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm transition-colors duration-300">
+                              {result.totalScore}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm transition-colors duration-300">
+                              {result.averageScore.toFixed(2)}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm transition-colors duration-300">
+                              {result.wins}
                             </TableCell>
                           </TableRow>
-                        </Fragment>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">Run a tournament to populate the standings table.</p>
-            )}
+                        );
 
-            {effectiveFormat.kind === "swiss" && swissRounds && swissRounds.length > 0 && (
-              <div className="mt-6 space-y-3 rounded-md border border-dashed border-muted p-3">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex w-full items-center justify-between px-2 py-1 text-sm font-semibold"
-                  onClick={() => setRoundsExpanded((prev) => !prev)}
-                >
-                  <span>Swiss round breakdown</span>
-                  <ChevronDown
-                    className={cn("h-4 w-4 transition-transform", roundsExpanded ? "rotate-180" : "rotate-0")}
-                  />
-                </Button>
-                {roundsExpanded && (
-                  <div className="space-y-4">
-                    {swissRounds.map((round) => (
-                      <div key={round.round} className="space-y-2 rounded-md border border-muted bg-muted/10 p-3">
-                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                          <span className="text-sm font-semibold">Round {round.round}</span>
-                          {round.leaderboard[0] ? (
-                            <span className="text-xs text-muted-foreground">
-                              Leader: {round.leaderboard[0].name} ({formatScore(round.leaderboard[0].totalScore)} pts)
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="space-y-2">
-                          {round.matches.map((match, index) => (
-                            <div
-                              key={`${round.round}-${match.player}-${match.opponent}-${index}`}
-                              className="flex flex-col gap-1 rounded border border-dashed border-muted bg-background/80 p-2 text-xs sm:flex-row sm:items-center sm:justify-between"
-                            >
-                              <span className="font-medium">
-                                {match.player} vs {match.opponent}
-                              </span>
-                              <span className="text-muted-foreground">
-                                {formatScore(match.playerScore)} - {formatScore(match.opponentScore)}{" "}
-                                {match.winner === "draw"
-                                  ? "(draw)"
-                                  : `(${match.winner === "player" ? match.player : match.opponent} win)`}
-                              </span>
-                            </div>
-                          ))}
-                          {round.matches.length === 0 && (
-                            <p className="text-xs text-muted-foreground">No pairings were recorded for this round.</p>
-                          )}
-                        </div>
-                        {round.byes.length > 0 && (
-                          <div className="text-xs text-muted-foreground">
-                            Bye:{" "}
-                            {round.byes
-                              .map((bye) => `${bye.player} (+${formatScore(bye.awardedScore)})`)
-                              .join(", ")}
-                          </div>
-                        )}
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground uppercase font-semibold">Top five snapshot</p>
-                          <ul className="space-y-1 text-xs text-muted-foreground">
-                            {round.leaderboard.slice(0, 5).map((entry, index) => {
-                              const tieDetail =
-                                swissTieBreaker === "buchholz" && typeof entry.buchholz === "number"
-                                  ? " - Buchholz " + formatScore(entry.buchholz)
-                                  : swissTieBreaker === "sonneborn-berger" && typeof entry.sonnebornBerger === "number"
-                                    ? " - Sonneborn-Berger " + formatScore(entry.sonnebornBerger)
-                                    : "";
-                              return (
-                                <li key={`${round.round}-leader-${entry.name}`}>
-                                  {index + 1}. {entry.name} - {formatScore(entry.totalScore)} pts - {entry.wins} wins
-                                  {tieDetail}
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                        if (!summary || !isExpanded) {
+                          return renderBaseRow();
+                        }
+
+                        return (
+                          <Fragment key={result.name}>
+                            {renderBaseRow()}
+                            <TableRow key={`${result.name}-summary`} data-variant="summary" className="bg-muted/30">
+                              <TableCell colSpan={5} className="p-0">
+                                <div className="summary-fade px-4 py-3">
+                                  <StrategySummaryInlineCard summary={summary} rank={index + 1} />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </Fragment>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-            )}
-          </div>
+
+              {effectiveFormat.kind === "swiss" && swissRounds && swissRounds.length > 0 && (
+                <div className="mt-6 space-y-3 rounded-md border border-dashed border-muted p-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="flex w-full items-center justify-between px-2 py-1 text-sm font-semibold"
+                    onClick={() => setRoundsExpanded((prev) => !prev)}
+                  >
+                    <span>Swiss round breakdown</span>
+                    <ChevronDown
+                      className={cn("h-4 w-4 transition-transform", roundsExpanded ? "rotate-180" : "rotate-0")}
+                    />
+                  </Button>
+                  {roundsExpanded && (
+                    <div className="space-y-4">
+                      {swissRounds.map((round) => (
+                        <div key={round.round} className="space-y-2 rounded-md border border-muted bg-muted/10 p-3">
+                          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <span className="text-sm font-semibold">Round {round.round}</span>
+                            {round.leaderboard[0] ? (
+                              <span className="text-xs text-muted-foreground">
+                                Leader: {round.leaderboard[0].name} ({formatScore(round.leaderboard[0].totalScore)} pts)
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="space-y-2">
+                            {round.matches.map((match, index) => (
+                              <div
+                                key={`${round.round}-${match.player}-${match.opponent}-${index}`}
+                                className="flex flex-col gap-1 rounded border border-dashed border-muted bg-background/80 p-2 text-xs sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <span className="font-medium">
+                                  {match.player} vs {match.opponent}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  {formatScore(match.playerScore)} - {formatScore(match.opponentScore)}{" "}
+                                  {match.winner === "draw"
+                                    ? "(draw)"
+                                    : `(${match.winner === "player" ? match.player : match.opponent} win)`}
+                                </span>
+                              </div>
+                            ))}
+                            {round.matches.length === 0 && (
+                              <p className="text-xs text-muted-foreground">No pairings were recorded for this round.</p>
+                            )}
+                          </div>
+                          {round.byes.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              Bye:{" "}
+                              {round.byes
+                                .map((bye) => `${bye.player} (+${formatScore(bye.awardedScore)})`)
+                                .join(", ")}
+                            </div>
+                          )}
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground uppercase font-semibold">Top five snapshot</p>
+                            <ul className="space-y-1 text-xs text-muted-foreground">
+                              {round.leaderboard.slice(0, 5).map((entry, index) => {
+                                const tieDetail =
+                                  swissTieBreaker === "buchholz" && typeof entry.buchholz === "number"
+                                    ? " - Buchholz " + formatScore(entry.buchholz)
+                                    : swissTieBreaker === "sonneborn-berger" && typeof entry.sonnebornBerger === "number"
+                                      ? " - Sonneborn-Berger " + formatScore(entry.sonnebornBerger)
+                                      : "";
+                                return (
+                                  <li key={`${round.round}-leader-${entry.name}`}>
+                                    {index + 1}. {entry.name} - {formatScore(entry.totalScore)} pts - {entry.wins} wins
+                                    {tieDetail}
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="rounded-lg border border-dashed border-muted bg-muted/10 p-4 text-sm text-muted-foreground">
+              Run a tournament to populate the standings table.
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="heatmap">
-          <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
-            <HeadToHeadHeatMap results={results} />
-          </div>
+          {hasResults ? (
+            <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
+              <HeadToHeadHeatMap results={results} />
+            </div>
+          ) : (
+            <div className="rounded-lg border border-dashed border-muted bg-muted/10 p-4 text-sm text-muted-foreground">
+              Run a tournament to see the head-to-head heat map.
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </section>
