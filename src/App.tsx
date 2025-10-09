@@ -36,6 +36,8 @@ import { simulateTournament } from "@/test-game";
 import { baseStrategies } from "@/strategies";
 import { StrategyInfoBadge } from "@/components/strategy-info";
 import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
+import { EvolutionSummaryCard } from "@/components/analytics/evolution-summary";
+import { useEvolutionAnalytics } from "@/hooks/useEvolutionAnalytics";
 import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { GeneticStrategyConfig } from "@/strategies/genetic";
@@ -179,7 +181,7 @@ function TournamentDashboard({
   );
 
   const minParticipants = evolutionEnabled ? 1 : 2;
-  const bestEvolutionIndividual = evolutionSummary?.bestIndividual ?? null;
+  const evolutionAnalytics = useEvolutionAnalytics(evolutionSummary);
 
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
@@ -947,26 +949,7 @@ function TournamentDashboard({
               )}
             </div>
           )}
-          {evolutionEnabled && evolutionSummary && (
-            <div className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
-              <div className="flex items-center justify-between">
-                <span>Generations evaluated</span>
-                <span className="font-semibold text-foreground">{evolutionSummary.history.length}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Best fitness</span>
-                <span className="font-semibold text-foreground">
-                  {formatScore(evolutionSummary.history.at(-1)?.metrics.bestFitness ?? 0)}
-                </span>
-              </div>
-              {bestEvolutionIndividual && (
-                <div className="flex items-center justify-between">
-                  <span>Top individual</span>
-                  <span className="font-semibold text-foreground">{bestEvolutionIndividual.strategyName}</span>
-                </div>
-              )}
-            </div>
-          )}
+          {evolutionEnabled && <EvolutionSummaryCard data={evolutionAnalytics} />}
         </section>
         </CardContent>
         <CardFooter className="flex justify-end">
