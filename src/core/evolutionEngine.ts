@@ -216,7 +216,7 @@ export function createBasicEvolutionEngine({
         averageFitness,
         medianFitness,
         mutationCount: mutationEvents,
-        crossoverCount,
+        crossoverCount: crossoverEvents,
       };
     }
 
@@ -262,27 +262,27 @@ export function createBasicEvolutionEngine({
         crossoverEvents += 1;
         offspringGenomes.forEach((genome) => {
           if (nextPopulation.length >= this.settings.populationSize) return;
-          const mutated = this.applyMutation(genome, random);
-          if (mutated !== genome) {
+          const { genome: mutatedGenome, mutated } = this.applyMutation(genome, random);
+          if (mutated) {
             mutationEvents += 1;
           }
           const seedParent = parents[random() < 0.5 ? 0 : 1];
           const config = {
             ...cloneGeneticConfig(seedParent.config),
-            genome: mutated,
+            genome: mutatedGenome,
           };
           const id = createIndividualId('child');
           const child: PopulationIndividual = {
             id,
             strategyName: `${config.name} #${id}`,
             config,
-            genome: mutated,
+            genome: mutatedGenome,
             fitness: null,
             parentIds: parents.map((parent) => parent.id),
             generationIntroduced: generation + 1,
           };
           nextPopulation.push(child);
-          if (mutated !== genome) {
+          if (mutated) {
             this.hooks?.onMutationApplied?.(child);
           }
         });
@@ -364,11 +364,66 @@ export function createBasicEvolutionEngine({
       }
     }
 
-    private applyMutation(genome: Genome, random: () => number): Genome {
+    private applyMutation(
+      genome: Genome,
+      random: () => number,
+    ): { genome: Genome; mutated: boolean } {
+      const normalized = ensureGeneIds(genome);
       if (this.settings.mutationRate <= 0) {
-        return ensureGeneIds(genome);
+        return { genome: normalized, mutated: false };
       }
-      return applyGenomeMutation(genome, { mutationRate: this.settings.mutationRate, random });
+      const mutatedGenome = applyGenomeMutation(normalized, {
+        mutationRate: this.settings.mutationRate,
+        random,
+      });
+      const mutated = !this.genomesAreEqual(normalized, mutatedGenome);
+      return { genome: mutatedGenome, mutated };
+    }
+
+    private genomesAreEqual(left: Genome, right: Genome): boolean {
+      if (left.length !== right.length) {
+        return false;
+      }
+      for (let index = 0; index < left.length; index += 1) {
+        const leftGene = left[index];
+        const rightGene = right[index];
+        if (!rightGene) {
+          return false;
+        }
+        if (leftGene.id !== rightGene.id) {
+          return false;
+        }
+        if (leftGene.response !== rightGene.response) {
+          return false;
+        }
+        const leftWeight = leftGene.weight ?? null;
+        const rightWeight = rightGene.weight ?? null;
+        if (leftWeight !== rightWeight) {
+          return false;
+        }
+        if (!this.conditionsAreEqual(leftGene.condition, rightGene.condition)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private conditionsAreEqual(
+      left: Genome[number]['condition'],
+      right: Genome[number]['condition'],
+    ): boolean {
+      if (left.opponentLastMove !== right.opponentLastMove) {
+        return false;
+      }
+      if (left.selfLastMove !== right.selfLastMove) {
+        return false;
+      }
+      const leftRange = left.roundRange ?? null;
+      const rightRange = right.roundRange ?? null;
+      if (leftRange === null || rightRange === null) {
+        return leftRange === rightRange;
+      }
+      return leftRange[0] === rightRange[0] && leftRange[1] === rightRange[1];
     }
   }
 
