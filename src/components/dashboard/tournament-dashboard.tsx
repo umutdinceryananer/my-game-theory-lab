@@ -1,0 +1,355 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Menu, X } from "lucide-react";
+
+import { SimulationParametersPanel } from "@/components/panels/simulation-parameters";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { PayoffMatrix, Strategy } from "@/core/types";
+import type { TournamentFormat, TournamentResult, SwissRoundSummary } from "@/core/tournament";
+import { cn } from "@/lib/utils";
+import { getEvolutionSettingsIssues } from "@/lib/tournament";
+import { StrategyRosterSection } from "@/components/dashboard/strategy-roster-section";
+import { TournamentInsightsSection } from "@/components/dashboard/tournament-insights-section";
+import { EvolutionToggleCard } from "@/components/evolution/evolution-toggle-card";
+import { EvolutionConfigPanel } from "@/components/evolution/evolution-config-panel";
+import { EvolutionInsights } from "@/components/evolution/evolution-insights";
+import { GeneticStrategyEditor } from "@/components/genetic/genetic-strategy-editor";
+import { useEvolutionAnalytics } from "@/hooks/useEvolutionAnalytics";
+import type { GeneticStrategyConfig } from "@/strategies/genetic";
+import type { EvolutionSettings, EvolutionSummary } from "@/core/evolution";
+
+type TournamentDashboardProps = {
+  availableStrategies: Strategy[];
+  geneticConfigs: Record<string, GeneticStrategyConfig>;
+  onGeneticConfigsChange: (nextConfigs: Record<string, GeneticStrategyConfig>) => void;
+  evolutionEnabled: boolean;
+  onEvolutionEnabledChange: (enabled: boolean) => void;
+  evolutionSettings: EvolutionSettings;
+  onEvolutionSettingsChange: (settings: EvolutionSettings) => void;
+  evolutionSeedNames: string[];
+  onEvolutionSeedsChange: (names: string[]) => void;
+  evolutionSummary: EvolutionSummary | null;
+  isRunning: boolean;
+  results: TournamentResult[] | null;
+  swissRounds: SwissRoundSummary[] | null;
+  onRunTournament: () => Promise<void>;
+  roundsPerMatch: number;
+  onRoundsChange: (value: number) => void;
+  noiseEnabled: boolean;
+  onNoiseToggle: (enabled: boolean) => void;
+  noisePercent: number;
+  onNoisePercentChange: (value: number) => void;
+  payoffMatrix: PayoffMatrix;
+  onPayoffMatrixChange: (matrix: PayoffMatrix) => void;
+  seedEnabled: boolean;
+  seedValue: string;
+  onSeedToggle: (enabled: boolean) => void;
+  onSeedChange: (value: string) => void;
+  lastRunFormat: TournamentFormat | null;
+  tournamentFormat: TournamentFormat;
+  onTournamentFormatChange: (format: TournamentFormat) => void;
+  strategySearch: string;
+  onStrategySearch: (value: string) => void;
+  selectedStrategyNames: string[];
+  onToggleStrategy: (name: string) => void;
+  onSelectAll: () => void;
+  onClearAll: () => void;
+  onAddStrategy: (name: string) => void;
+  onRemoveStrategy: (name: string) => void;
+  activeStrategyCount: number;
+};
+
+export function TournamentDashboard({
+  availableStrategies,
+  geneticConfigs,
+  onGeneticConfigsChange,
+  evolutionEnabled,
+  onEvolutionEnabledChange,
+  evolutionSettings,
+  onEvolutionSettingsChange,
+  evolutionSeedNames,
+  onEvolutionSeedsChange,
+  evolutionSummary,
+  isRunning,
+  results,
+  swissRounds,
+  onRunTournament,
+  roundsPerMatch,
+  onRoundsChange,
+  noiseEnabled,
+  onNoiseToggle,
+  noisePercent,
+  onNoisePercentChange,
+  payoffMatrix,
+  onPayoffMatrixChange,
+  seedEnabled,
+  seedValue,
+  onSeedToggle,
+  onSeedChange,
+  lastRunFormat,
+  tournamentFormat,
+  onTournamentFormatChange,
+  strategySearch,
+  onStrategySearch,
+  selectedStrategyNames,
+  onToggleStrategy,
+  onSelectAll,
+  onClearAll,
+  onAddStrategy,
+  onRemoveStrategy,
+  activeStrategyCount,
+}: TournamentDashboardProps) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [geneticEditorOpen, setGeneticEditorOpen] = useState(false);
+  const [evolutionConfigCollapsed, setEvolutionConfigCollapsed] = useState(true);
+  const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setIsVisible(true));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
+
+  useEffect(() => {
+    if (!results || results.length === 0) {
+      setExpandedStrategyName(null);
+      return;
+    }
+
+    const hasExpanded = results.some((item) => item.name === expandedStrategyName);
+
+    if (!expandedStrategyName || !hasExpanded) {
+      setExpandedStrategyName(results[0].name);
+    }
+  }, [results, expandedStrategyName]);
+
+  const minParticipants = evolutionEnabled ? 1 : 2;
+  const evolutionAnalytics = useEvolutionAnalytics(evolutionSummary);
+  const evolutionSettingsErrors = useMemo(
+    () => (evolutionEnabled ? getEvolutionSettingsIssues(evolutionSettings) : []),
+    [evolutionEnabled, evolutionSettings],
+  );
+  const geneticSeedOptions = useMemo(
+    () => Object.values(geneticConfigs).sort((a, b) => a.name.localeCompare(b.name)),
+    [geneticConfigs],
+  );
+  const selectedSeedConfigs = useMemo(
+    () =>
+      evolutionSeedNames
+        .map((name) => geneticConfigs[name])
+        .filter((config): config is GeneticStrategyConfig => Boolean(config)),
+    [evolutionSeedNames, geneticConfigs],
+  );
+  const evolutionSeedIssues = useMemo(() => {
+    if (!evolutionEnabled) return [];
+    if (geneticSeedOptions.length === 0) {
+      return ["Create at least one genetic configuration to seed the evolutionary run."];
+    }
+    if (selectedSeedConfigs.length === 0) {
+      return ["Select at least one genetic configuration for the seed pool."];
+    }
+    return [];
+  }, [evolutionEnabled, geneticSeedOptions, selectedSeedConfigs]);
+  const evolutionConfigurationErrors = useMemo(
+    () => [...evolutionSettingsErrors, ...evolutionSeedIssues],
+    [evolutionSettingsErrors, evolutionSeedIssues],
+  );
+  const allSeedNames = useMemo(
+    () => geneticSeedOptions.map((config) => config.name),
+    [geneticSeedOptions],
+  );
+  const handleSeedToggle = useCallback(
+    (name: string) => {
+      const nameSet = new Set(evolutionSeedNames);
+      if (nameSet.has(name)) {
+        nameSet.delete(name);
+      } else {
+        nameSet.add(name);
+      }
+      const ordered = allSeedNames.filter((seedName) => nameSet.has(seedName));
+      onEvolutionSeedsChange(ordered);
+    },
+    [allSeedNames, evolutionSeedNames, onEvolutionSeedsChange],
+  );
+  const handleSelectAllSeeds = useCallback(() => {
+    onEvolutionSeedsChange(allSeedNames);
+  }, [allSeedNames, onEvolutionSeedsChange]);
+  const handleClearSeeds = useCallback(() => {
+    onEvolutionSeedsChange([]);
+  }, [onEvolutionSeedsChange]);
+
+  const filteredSelectedStrategies = useMemo(() => {
+    const query = strategySearch.trim().toLowerCase();
+    return availableStrategies.filter((strategy) => {
+      if (!selectedStrategyNames.includes(strategy.name)) return false;
+      if (!query) return true;
+      return (
+        strategy.name.toLowerCase().includes(query) ||
+        strategy.description.toLowerCase().includes(query)
+      );
+    });
+  }, [availableStrategies, selectedStrategyNames, strategySearch]);
+
+  const filteredAvailableStrategies = useMemo(() => {
+    const query = strategySearch.trim().toLowerCase();
+    return availableStrategies.filter((strategy) => {
+      if (selectedStrategyNames.includes(strategy.name)) return false;
+      if (!query) return true;
+      return (
+        strategy.name.toLowerCase().includes(query) ||
+        strategy.description.toLowerCase().includes(query)
+      );
+    });
+  }, [availableStrategies, selectedStrategyNames, strategySearch]);
+  const runBlocked = evolutionEnabled && evolutionConfigurationErrors.length > 0;
+  const insufficientOpponents = activeStrategyCount < minParticipants;
+  const runButtonDisabled = runBlocked || insufficientOpponents || isRunning;
+
+  return (
+    <>
+      <Card
+        className={cn(
+          "transition-opacity duration-500",
+          isVisible ? "opacity-100" : "opacity-0"
+        )}
+      >
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <CardTitle>Game Theory Lab</CardTitle>
+              <CardDescription>
+                Explore the Iterated Prisoner&apos;s Dilemma with pluggable strategies.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setSettingsOpen(true)}
+                className="flex items-center gap-2"
+              >
+                <Menu className="h-4 w-4" />
+                Simulation Settings
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <StrategyRosterSection
+            strategySearch={strategySearch}
+            onStrategySearch={onStrategySearch}
+            selectedStrategyNames={selectedStrategyNames}
+            filteredSelectedStrategies={filteredSelectedStrategies}
+            filteredAvailableStrategies={filteredAvailableStrategies}
+            totalStrategyCount={availableStrategies.length}
+            geneticConfigs={geneticConfigs}
+            onToggleStrategy={onToggleStrategy}
+            onSelectAll={onSelectAll}
+            onClearAll={onClearAll}
+            onAddStrategy={onAddStrategy}
+            onRemoveStrategy={onRemoveStrategy}
+            onRunTournament={() => void onRunTournament()}
+            runButtonDisabled={runButtonDisabled}
+            isRunning={isRunning}
+            evolutionEnabled={evolutionEnabled}
+          />
+          <TournamentInsightsSection
+            results={results}
+            swissRounds={swissRounds}
+            tournamentFormat={tournamentFormat}
+            lastRunFormat={lastRunFormat}
+            activeStrategyCount={activeStrategyCount}
+          />
+
+          <div className="space-y-4 rounded-lg border border-dashed border-muted p-4">
+            <EvolutionToggleCard
+              enabled={evolutionEnabled}
+              onToggle={onEvolutionEnabledChange}
+              toggleDisabled={isRunning}
+              minParticipants={minParticipants}
+              activeStrategyCount={activeStrategyCount}
+              onOpenGeneticEditor={() => setGeneticEditorOpen(true)}
+            />
+            <EvolutionConfigPanel
+              settings={evolutionSettings}
+              onSettingsChange={onEvolutionSettingsChange}
+              seedOptions={geneticSeedOptions}
+              selectedSeedNames={evolutionSeedNames}
+              onSeedToggle={handleSeedToggle}
+              onSeedSelectAll={handleSelectAllSeeds}
+              onSeedClear={handleClearSeeds}
+              collapsed={evolutionConfigCollapsed}
+              onToggleCollapse={() => setEvolutionConfigCollapsed((previous) => !previous)}
+              errors={evolutionConfigurationErrors}
+            />
+            <EvolutionInsights
+              analytics={evolutionAnalytics}
+              roundsPerMatch={roundsPerMatch}
+              enabled={evolutionEnabled}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {geneticEditorOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 transition-opacity duration-200">
+          <div
+            className="absolute inset-0 bg-black/60 transition-opacity duration-200"
+            onClick={() => setGeneticEditorOpen(false)}
+          />
+          <GeneticStrategyEditor
+            configs={geneticConfigs}
+            onClose={() => setGeneticEditorOpen(false)}
+            onSave={onGeneticConfigsChange}
+          />
+        </div>
+      )}
+
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200"
+        aria-hidden={!settingsOpen}
+        style={{
+          pointerEvents: settingsOpen ? "auto" : "none",
+          opacity: settingsOpen ? 1 : 0,
+        }}
+      >
+        <div
+          className="absolute inset-0 bg-black/60 transition-opacity duration-200"
+          onClick={closeSettings}
+          style={{ opacity: settingsOpen ? 1 : 0 }}
+        />
+        <Card
+          className="relative z-10 w-full max-w-3xl overflow-hidden shadow-lg transition-transform duration-200"
+          style={{ transform: settingsOpen ? "scale(1)" : "scale(0.97)" }}
+        >
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <h2 className="text-lg font-semibold">Simulation Settings</h2>
+            <Button variant="ghost" size="icon" onClick={closeSettings}>
+              <X className="h-5 w-5" />
+              <span className="sr-only">Close</span>
+            </Button>
+          </div>
+          <div className="max-h-[75vh] overflow-y-auto px-6 py-4">
+            <SimulationParametersPanel
+              rounds={roundsPerMatch}
+              onRoundsChange={onRoundsChange}
+              noiseEnabled={noiseEnabled}
+              onNoiseToggle={onNoiseToggle}
+              noisePercent={noisePercent}
+              onNoisePercentChange={onNoisePercentChange}
+              payoffMatrix={payoffMatrix}
+              onPayoffMatrixChange={onPayoffMatrixChange}
+              seedEnabled={seedEnabled}
+              seedValue={seedValue}
+              onSeedToggle={onSeedToggle}
+              onSeedChange={onSeedChange}
+              activeStrategyCount={activeStrategyCount}
+              tournamentFormat={tournamentFormat}
+              onTournamentFormatChange={onTournamentFormatChange}
+            />
+          </div>
+        </Card>
+      </div>
+    </>
+  );
+}

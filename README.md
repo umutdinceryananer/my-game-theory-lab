@@ -26,6 +26,7 @@ Interactive React/Vite sandbox for the iterated Prisoner's Dilemma. Strategies f
 - **Onboarding flow** \ `src/components/landing-screen.tsx` greets users with a fade transition before dropping them into the dashboard.
 - **Simulation control panel** \ `src/components/panels/simulation-parameters.tsx` exposes rounds-per-match, noise toggles, payoff matrix editor, deterministic seed, and tournament format (single/double round-robin, Swiss).
 - **Insights** \ Standings and head-to-head heat map live inside a shadcn-style tab control; Swiss tournaments surface per-round breakdowns and leader snapshots.
+- **Evolution mode dashboard** \ Enable the evolutionary toggle to configure selection/mutation parameters, curate the genetic seed pool, and track best/average/median fitness with the Chart.js-powered trend line and summary card.
 
 ## Simulation Controls
 

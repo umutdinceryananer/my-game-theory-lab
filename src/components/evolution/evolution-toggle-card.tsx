@@ -1,45 +1,42 @@
-﻿import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Play } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Dna } from "lucide-react";
 
 interface EvolutionToggleCardProps {
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   toggleDisabled?: boolean;
-  runDisabled?: boolean;
-  isRunning: boolean;
-  onRun: () => void;
   minParticipants: number;
   activeStrategyCount: number;
+  onOpenGeneticEditor: () => void;
 }
 
 export function EvolutionToggleCard({
   enabled,
   onToggle,
   toggleDisabled,
-  runDisabled,
-  isRunning,
-  onRun,
   minParticipants,
   activeStrategyCount,
+  onOpenGeneticEditor,
 }: EvolutionToggleCardProps) {
   const insufficientOpponents = activeStrategyCount < minParticipants;
-  const runButtonDisabled = runDisabled || insufficientOpponents || isRunning;
+
   return (
-    <Card className="border-primary/30 bg-primary/5">
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <CardTitle className="text-sm font-semibold uppercase text-muted-foreground">
+    <div className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-2 sm:items-stretch">
+        <div className="flex h-full items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3">
+          <div className="space-y-1">
+            <span className="block text-xs font-semibold uppercase text-muted-foreground">
               Evolutionary mode
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Run genetic strategies through an evolutionary loop before the tournament.
-            </CardDescription>
+            </span>
+            <span className="block text-xs text-muted-foreground">
+              Run genetic strategies before the tournament.
+            </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{enabled ? 'Enabled' : 'Disabled'}</span>
+            <span className="text-xs text-muted-foreground">
+              {enabled ? "Enabled" : "Disabled"}
+            </span>
             <Switch
               checked={enabled}
               onCheckedChange={onToggle}
@@ -48,33 +45,29 @@ export function EvolutionToggleCard({
             />
           </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          Select strategies, configure settings, and run evolution to discover high-performing genomes.
-        </p>
-        <Button
-          size="lg"
-          className="w-full sm:w-auto"
-          onClick={onRun}
-          disabled={runButtonDisabled}
-        >
-          {!isRunning && <Play className="mr-2 h-4 w-4" />}
-          {isRunning
-            ? 'Running...'
-            : enabled
-            ? 'Run Evolution + Tournament'
-            : 'Run Tournament'}
-        </Button>
-      </CardContent>
+        <div className="flex h-full items-center justify-center gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-3">
+          <Button
+            variant="outline"
+            size="lg"
+            className="h-full w-full justify-center sm:w-auto"
+            onClick={onOpenGeneticEditor}
+          >
+            <Dna className="mr-2 h-4 w-4" aria-hidden="true" />
+            Genetic editor
+          </Button>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Select strategies, configure settings, and run evolution to discover high-performing genomes.
+      </p>
       {enabled && insufficientOpponents && (
-        <div className="border-t px-6 py-3">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2">
           <p className="text-xs text-destructive">
             Select at least {minParticipants} opponent
-            {minParticipants === 1 ? '' : 's'} to run the evolutionary cycle.
+            {minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
           </p>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
