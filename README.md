@@ -35,12 +35,12 @@ Interactive React/Vite sandbox for the iterated Prisoner's Dilemma. Strategies f
 
 ## Useful Scripts
 
-- `npm run dev`  start Vite in development mode.
-- `npm run build`  type-check and build the production bundle.
-- `npm run preview`  locally preview the production build.
-- `npm run typecheck`  run TypeScript in `--noEmit` mode.
-- `npm run lint:strict`  run ESLint with the configured TypeScript rules.
-- `npm test`  run Vitest (coverage includes genetic helpers and operators).
+- `npm run dev` – start Vite in development mode.
+- `npm run build` – type-check and build the production bundle.
+- `npm run preview` – locally preview the production build.
+- `npm run typecheck` – run TypeScript in `--noEmit` mode.
+- `npm run lint:strict` – run ESLint with the configured TypeScript rules.
+- `npm test` – run Vitest (coverage includes genetic helpers and operators).
 
 ## Customization Tips
 
@@ -51,6 +51,12 @@ Interactive React/Vite sandbox for the iterated Prisoner's Dilemma. Strategies f
 ## Download
 
 Grab the latest packaged build from the GitHub **Releases** page. After downloading the ZIP, extract it and serve the `dist/` folder with any static server of your choice.
+
+## Roadmap
+
+- **Evolutionary tournament mode** – Data model and engine contract live in `src/core/evolution.ts`. Upcoming work will wire selection/mutation/crossover, population metrics, and UI controls.
+- **Analytics enrichments** – Planned dashboards for gene activation counts, mutation impact, and evolutionary run summaries.
+- **Import/export** – Future builds may support saving and sharing genetic configurations.
 
 Happy experimenting!
 
