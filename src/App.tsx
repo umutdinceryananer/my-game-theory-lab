@@ -57,6 +57,8 @@ type DashboardProps = {
   onEvolutionEnabledChange: (enabled: boolean) => void;
   evolutionSettings: EvolutionSettings;
   onEvolutionSettingsChange: (settings: EvolutionSettings) => void;
+  evolutionSeedNames: string[];
+  onEvolutionSeedsChange: (names: string[]) => void;
   evolutionSummary: EvolutionSummary | null;
   isRunning: boolean;
   results: TournamentResult[] | null;
@@ -140,6 +142,8 @@ function TournamentDashboard({
   onEvolutionEnabledChange,
   evolutionSettings,
   onEvolutionSettingsChange,
+  evolutionSeedNames,
+  onEvolutionSeedsChange,
   evolutionSummary,
   isRunning,
   results,
@@ -223,6 +227,60 @@ function TournamentDashboard({
     evolutionEnabled &&
     evolutionSettings.selectionMethod === "tournament" &&
     (tournamentSizeValue > evolutionSettings.populationSize || tournamentSizeValue < 2);
+  const geneticSeedOptions = useMemo(
+    () =>
+      Object.values(geneticConfigs)
+        .map((config) => ({
+          ...config,
+          geneCount: config.genome.length,
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [geneticConfigs],
+  );
+  const selectedSeedConfigs = useMemo(
+    () =>
+      evolutionSeedNames
+        .map((name) => geneticConfigs[name])
+        .filter((config): config is GeneticStrategyConfig => Boolean(config)),
+    [evolutionSeedNames, geneticConfigs],
+  );
+  const evolutionSeedIssues = useMemo(() => {
+    if (!evolutionEnabled) return [];
+    if (geneticSeedOptions.length === 0) {
+      return ["Create at least one genetic configuration to seed the evolutionary run."];
+    }
+    if (selectedSeedConfigs.length === 0) {
+      return ["Select at least one genetic configuration for the seed pool."];
+    }
+    return [];
+  }, [evolutionEnabled, geneticSeedOptions, selectedSeedConfigs]);
+  const evolutionConfigurationErrors = useMemo(
+    () => [...evolutionSettingsErrors, ...evolutionSeedIssues],
+    [evolutionSettingsErrors, evolutionSeedIssues],
+  );
+  const allSeedNames = useMemo(
+    () => geneticSeedOptions.map((config) => config.name),
+    [geneticSeedOptions],
+  );
+  const handleSeedToggle = useCallback(
+    (name: string) => {
+      const nameSet = new Set(evolutionSeedNames);
+      if (nameSet.has(name)) {
+        nameSet.delete(name);
+      } else {
+        nameSet.add(name);
+      }
+      const ordered = allSeedNames.filter((seedName) => nameSet.has(seedName));
+      onEvolutionSeedsChange(ordered);
+    },
+    [allSeedNames, evolutionSeedNames, onEvolutionSeedsChange],
+  );
+  const handleSelectAllSeeds = useCallback(() => {
+    onEvolutionSeedsChange(allSeedNames);
+  }, [allSeedNames, onEvolutionSeedsChange]);
+  const handleClearSeeds = useCallback(() => {
+    onEvolutionSeedsChange([]);
+  }, [onEvolutionSeedsChange]);
 
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
@@ -1007,16 +1065,97 @@ function TournamentDashboard({
                   </label>
                 </div>
               )}
+              <div className="space-y-2 rounded-md border border-muted/50 bg-muted/10 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">
+                    Seed pool ({selectedSeedConfigs.length}/{geneticSeedOptions.length})
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="px-2 py-1"
+                      onClick={handleSelectAllSeeds}
+                      disabled={
+                        geneticSeedOptions.length === 0 ||
+                        evolutionSeedNames.length === geneticSeedOptions.length
+                      }
+                    >
+                      Select all
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="px-2 py-1"
+                      onClick={handleClearSeeds}
+                      disabled={evolutionSeedNames.length === 0}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Choose which genetic configurations seed the evolutionary population. Seeds are cloned
+                  and mutated when the run starts.
+                </p>
+                <div className="space-y-2">
+                  {geneticSeedOptions.map((config) => {
+                    const checked = evolutionSeedNames.includes(config.name);
+                    return (
+                      <label
+                        key={config.name}
+                        className={cn(
+                          "flex cursor-pointer items-start gap-3 rounded-md border border-transparent p-2 text-xs transition-colors",
+                          checked ? "border-primary/40 bg-primary/10" : "hover:border-muted-foreground/20 hover:bg-muted/40"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-3.5 w-3.5 accent-primary"
+                          checked={checked}
+                          onChange={() => handleSeedToggle(config.name)}
+                        />
+                        <div className="space-y-1">
+                          <p className="font-medium text-foreground">{config.name}</p>
+                          <p className="text-[0.7rem] text-muted-foreground">{config.description}</p>
+                          <div className="flex flex-wrap items-center gap-2 text-[0.65rem] text-muted-foreground">
+                            <span>
+                              {config.geneCount} {config.geneCount === 1 ? "gene" : "genes"}
+                            </span>
+                            {typeof config.mutationRate === "number" && (
+                              <Badge variant="outline" className="text-[0.65rem]">
+                                μ {config.mutationRate.toFixed(2)}
+                              </Badge>
+                            )}
+                            {typeof config.crossoverRate === "number" && (
+                              <Badge variant="outline" className="text-[0.65rem]">
+                                χ {config.crossoverRate.toFixed(2)}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                  {geneticSeedOptions.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No genetic configurations available. Open the genetic editor to add seed strategies.
+                    </p>
+                  )}
+                </div>
+              </div>
               {activeStrategyCount < minParticipants && (
                 <p className="text-xs text-destructive">
                   Select at least {minParticipants} opponent{minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
                 </p>
               )}
-              {evolutionSettingsErrors.length > 0 && (
+              {evolutionConfigurationErrors.length > 0 && (
                 <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
                   <p className="font-semibold">Evolution settings need attention:</p>
                   <ul className="mt-2 space-y-1 list-disc pl-4 text-destructive">
-                    {evolutionSettingsErrors.map((issue) => (
+                    {evolutionConfigurationErrors.map((issue) => (
                       <li key={issue}>{issue}</li>
                     ))}
                   </ul>
@@ -1035,7 +1174,7 @@ function TournamentDashboard({
             disabled={
               isRunning ||
               activeStrategyCount < minParticipants ||
-              (evolutionEnabled && evolutionSettingsErrors.length > 0)
+              (evolutionEnabled && evolutionConfigurationErrors.length > 0)
             }
           >
             {!isRunning && <Play className="mr-2 h-4 w-4" />}
@@ -1131,6 +1270,9 @@ export default function App() {
     const [geneticConfigs, setGeneticConfigs] = useState<GeneticConfigMap>(() =>
       cloneGeneticConfigMap(geneticStrategyConfigs)
     );
+    const [evolutionSeedNames, setEvolutionSeedNames] = useState<string[]>(() =>
+      Object.keys(geneticStrategyConfigs).sort((a, b) => a.localeCompare(b))
+    );
     const [evolutionEnabled, setEvolutionEnabled] = useState(false);
     const [evolutionSettings, setEvolutionSettings] = useState<EvolutionSettings>({
       populationSize: 12,
@@ -1180,6 +1322,24 @@ export default function App() {
     });
   }, [strategyOrder]);
 
+  useEffect(() => {
+    setEvolutionSeedNames((previous) => {
+      const availableNames = Object.keys(geneticConfigs).sort((a, b) => a.localeCompare(b));
+      const previousSet = new Set(previous);
+      let next = availableNames.filter((name) => previousSet.has(name));
+      if (next.length === 0 && availableNames.length > 0) {
+        next = [...availableNames];
+      } else if (next.length > 0) {
+        const additions = availableNames.filter((name) => !previousSet.has(name));
+        next = [...next, ...additions];
+      }
+      if (next.length === previous.length && next.every((name, index) => name === previous[index])) {
+        return previous;
+      }
+      return next;
+    });
+  }, [geneticConfigs]);
+
   const activeStrategies = useMemo(
     () =>
       selectedStrategyNames
@@ -1192,8 +1352,16 @@ export default function App() {
       if (isRunning) return;
       const minimumRequired = evolutionEnabled ? 1 : 2;
       if (activeStrategies.length < minimumRequired) return;
+      const seedPool = evolutionSeedNames
+        .map((name) => geneticConfigs[name])
+        .filter((config): config is GeneticStrategyConfig => Boolean(config));
       if (evolutionEnabled) {
         const issues = getEvolutionSettingsIssues(evolutionSettings);
+        if (Object.keys(geneticConfigs).length === 0) {
+          issues.push("Create at least one genetic configuration to seed the evolutionary run.");
+        } else if (seedPool.length === 0) {
+          issues.push("Select at least one genetic configuration for the seed pool.");
+        }
         if (issues.length > 0) {
           console.warn("Evolution run blocked due to invalid settings:", issues);
           return;
@@ -1210,7 +1378,6 @@ export default function App() {
 
         if (evolutionEnabled) {
           try {
-            const seedPool = Object.values(geneticConfigs);
             if (seedPool.length > 0 && activeStrategies.length >= 1) {
               const engine = createBasicEvolutionEngine({
                 settings: evolutionSettings,
@@ -1280,14 +1447,21 @@ export default function App() {
       roundsPerMatch,
       seedEnabled,
       seedValue,
+      evolutionSeedNames,
     ]);
 
     const handleGeneticConfigsChange = useCallback(
       (nextConfigs: GeneticConfigMap) => {
         setGeneticConfigs(cloneGeneticConfigMap(nextConfigs));
+        setEvolutionSummary(null);
       },
       []
     );
+
+    const handleEvolutionSeedsChange = useCallback((names: string[]) => {
+      setEvolutionSeedNames(names);
+      setEvolutionSummary(null);
+    }, []);
 
     const handleEvolutionSettingsChange = useCallback(
       (nextSettings: EvolutionSettings) => {
@@ -1373,6 +1547,8 @@ export default function App() {
             onEvolutionEnabledChange={setEvolutionEnabled}
             evolutionSettings={evolutionSettings}
             onEvolutionSettingsChange={handleEvolutionSettingsChange}
+            evolutionSeedNames={evolutionSeedNames}
+            onEvolutionSeedsChange={handleEvolutionSeedsChange}
             evolutionSummary={evolutionSummary}
             isRunning={isRunning}
             results={results}
