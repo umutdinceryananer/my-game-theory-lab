@@ -9,7 +9,7 @@ interface EvolutionInsightsProps {
 }
 
 export function EvolutionInsights({ analytics, roundsPerMatch, enabled }: EvolutionInsightsProps) {
-  if (!enabled) {
+  if (!enabled || !analytics.hasHistory) {
     return null;
   }
 

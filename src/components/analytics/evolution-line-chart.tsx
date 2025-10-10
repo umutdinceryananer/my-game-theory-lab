@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -147,7 +147,7 @@ export function EvolutionLineChart({ points, roundsPerMatch }: EvolutionLineChar
           </span>
         </div>
       </CardHeader>
-      <CardContent className="h-64 sm:h-72">
+      <CardContent className={hasData ? 'h-64 sm:h-72' : 'py-6'}>
         {hasData ? (
           <Line data={data} options={options} role="img" aria-label="Evolution fitness trend" />
         ) : (
@@ -157,3 +157,4 @@ export function EvolutionLineChart({ points, roundsPerMatch }: EvolutionLineChar
     </Card>
   );
 }
+
