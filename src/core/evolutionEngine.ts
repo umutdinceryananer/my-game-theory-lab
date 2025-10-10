@@ -273,7 +273,7 @@ export function createBasicEvolutionEngine({
         if (shouldCrossover) {
           crossoverEvents += 1;
         }
-        offspringGenomes.forEach((genome, index) => {
+        offspringGenomes.forEach((genome) => {
           if (nextPopulation.length >= this.settings.populationSize) return;
           const { genome: mutatedGenome, mutated } = this.applyMutation(genome, random);
           if (mutated) {

@@ -38,8 +38,9 @@ export function TournamentInsightsSection({
 
   const { getSummary } = useTournamentAnalytics(results);
 
-  const hasResults = Boolean(results && results.length > 0);
-  const champion = results?.[0] ?? null;
+  const normalizedResults = useMemo(() => results ?? [], [results]);
+  const hasResults = normalizedResults.length > 0;
+  const champion = normalizedResults[0] ?? null;
   const effectiveFormat = useMemo(
     () => (results ? lastRunFormat ?? tournamentFormat : tournamentFormat),
     [lastRunFormat, results, tournamentFormat],
@@ -56,17 +57,16 @@ export function TournamentInsightsSection({
       case "swiss": {
         const participants = Math.max(2, activeStrategyCount || 0);
         const defaultRounds = Math.max(1, Math.ceil(Math.log2(participants)) + 1);
-        const inferredRounds =
-          results && results.length > 0
-            ? Math.max(...results.map((result) => result.matchesPlayed))
-            : undefined;
+        const inferredRounds = hasResults
+          ? Math.max(...normalizedResults.map((result) => result.matchesPlayed))
+          : undefined;
         const roundCount = effectiveFormat.rounds ?? inferredRounds ?? defaultRounds;
         return `Swiss pairing - ${roundCount} round${roundCount === 1 ? "" : "s"}`;
       }
       default:
         return "Custom format";
     }
-  }, [activeStrategyCount, effectiveFormat, results]);
+  }, [activeStrategyCount, effectiveFormat, hasResults, normalizedResults]);
 
   const swissTieBreaker =
     effectiveFormat.kind === "swiss" ? effectiveFormat.tieBreaker ?? "total-score" : null;
@@ -77,16 +77,16 @@ export function TournamentInsightsSection({
   );
 
   useEffect(() => {
-    if (!results || results.length === 0) {
+    if (normalizedResults.length === 0) {
       setExpandedStrategyName(null);
       return;
     }
 
-    const hasExpanded = results.some((item) => item.name === expandedStrategyName);
+    const hasExpanded = normalizedResults.some((item) => item.name === expandedStrategyName);
     if (!expandedStrategyName || !hasExpanded) {
-      setExpandedStrategyName(results[0].name);
+      setExpandedStrategyName(normalizedResults[0].name);
     }
-  }, [results, expandedStrategyName]);
+  }, [normalizedResults, expandedStrategyName]);
 
   useEffect(() => {
     setRoundsExpanded(false);
@@ -161,9 +161,9 @@ export function TournamentInsightsSection({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {results.map((result, index) => {
-                        const isExpanded = result.name === expandedStrategyName;
-                        const summary = getSummary(result.name);
+                      {normalizedResults.map((result, index) => {
+                          const isExpanded = result.name === expandedStrategyName;
+                          const summary = getSummary(result.name);
 
                         const renderBaseRow = () => (
                           <TableRow
@@ -320,7 +320,7 @@ export function TournamentInsightsSection({
         <TabsContent value="heatmap">
           {hasResults ? (
             <div className="min-h-[320px] rounded-lg border border-muted bg-card p-4 shadow-sm">
-              <HeadToHeadHeatMap results={results} />
+              <HeadToHeadHeatMap results={normalizedResults} />
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-muted bg-muted/10 p-4 text-sm text-muted-foreground">

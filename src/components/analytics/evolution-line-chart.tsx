@@ -9,6 +9,7 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import type { ChartOptions, TooltipItem } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,7 +80,7 @@ export function EvolutionLineChart({ points, roundsPerMatch }: EvolutionLineChar
     [labels, best, avg, median],
   );
 
-  const options = useMemo(
+  const options = useMemo<ChartOptions<'line'>>(
     () => ({
       responsive: true,
       maintainAspectRatio: false as const,
@@ -94,8 +95,8 @@ export function EvolutionLineChart({ points, roundsPerMatch }: EvolutionLineChar
           grid: { color: 'rgba(148, 163, 184, 0.15)' },
           ticks: {
             callback: (value: number | string) => {
-              const n = typeof value === 'string' ? Number(value) : value;
-              return formatNumber(n);
+              const numericValue = typeof value === 'string' ? Number(value) : value;
+              return formatNumber(Number.isNaN(numericValue) ? 0 : numericValue);
             },
           },
         },
@@ -104,8 +105,28 @@ export function EvolutionLineChart({ points, roundsPerMatch }: EvolutionLineChar
         legend: { position: 'top' as const, labels: { usePointStyle: true } },
         tooltip: {
           callbacks: {
-            title: (items: any[]) => (items[0] ? `Gen ${items[0].label}` : ''),
-            label: (ctx: any) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)}`,
+            title: (items: TooltipItem<'line'>[]) => {
+              const label = items[0]?.label;
+              if (label === undefined || label === null) {
+                return '';
+              }
+              return `Gen ${label}`;
+            },
+            label: (ctx: TooltipItem<'line'>) => {
+              const datasetLabel = ctx.dataset.label ?? 'Value';
+              const parsed = ctx.parsed;
+              let value: number;
+              if (typeof parsed === 'object' && parsed !== null && 'y' in parsed) {
+                const parsedY = (parsed as { y?: unknown }).y;
+                value =
+                  typeof parsedY === 'number'
+                    ? parsedY
+                    : Number(parsedY ?? Number.NaN);
+              } else {
+                value = typeof parsed === 'number' ? parsed : Number(parsed ?? Number.NaN);
+              }
+              return `${datasetLabel}: ${formatNumber(Number.isNaN(value) ? 0 : value)}`;
+            },
           },
         },
       },
