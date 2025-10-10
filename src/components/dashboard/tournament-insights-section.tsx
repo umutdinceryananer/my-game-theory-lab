@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, Play, Trophy } from "lucide-react";
+import { ChevronDown, Trophy } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -120,14 +120,6 @@ export function TournamentInsightsSection({
             )}
           </div>
           <p className="text-xs text-muted-foreground">{formatLabel}</p>
-        </div>
-        <div className="flex gap-2">
-          {results && (
-            <Button variant="outline" size="sm" className="flex items-center gap-1" onClick={() => setActiveInsightsPanel("standings")}>
-              <Play className="h-3.5 w-3.5" />
-              Standings
-            </Button>
-          )}
         </div>
       </div>
 
