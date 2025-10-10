@@ -15,7 +15,7 @@ export function EvolutionSummaryCard({ data }: EvolutionSummaryProps) {
   const hasData = data.hasHistory && latest;
 
   return (
-    <Card className="border-primary/30 bg-primary/5">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-base font-semibold">Evolution snapshot</CardTitle>
@@ -24,16 +24,18 @@ export function EvolutionSummaryCard({ data }: EvolutionSummaryProps) {
           </span>
         </div>
       </CardHeader>
-      <CardContent className="grid gap-3">
+      <CardContent className="space-y-3">
         {hasData ? (
           <>
-            <SummaryRow label="Best fitness" value={formatMetric(data.bestFitness)} highlight />
-            <SummaryRow label="Average fitness" value={formatMetric(latest?.averageFitness ?? null)} />
-            <SummaryRow label="Median fitness" value={formatMetric(latest?.medianFitness ?? null)} />
-            <SummaryRow label="Mutation events" value={data.mutationTotal.toString()} />
-            <SummaryRow label="Crossover events" value={data.crossoverTotal.toString()} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
+              <SummaryMetric label="Best fitness" value={formatMetric(data.bestFitness)} highlight />
+              <SummaryMetric label="Average fitness" value={formatMetric(latest?.averageFitness ?? null)} />
+              <SummaryMetric label="Median fitness" value={formatMetric(latest?.medianFitness ?? null)} />
+              <SummaryMetric label="Mutation events" value={data.mutationTotal.toString()} />
+              <SummaryMetric label="Crossover events" value={data.crossoverTotal.toString()} />
+            </div>
             {data.bestIndividual && (
-              <div className="rounded-md border border-primary/20 bg-primary/10 px-3 py-2 text-xs">
+              <div className="rounded-md border border-border bg-background px-3 py-2 text-xs">
                 <p className="text-muted-foreground">Top individual</p>
                 <p className="font-medium text-foreground">{data.bestIndividual.strategyName}</p>
                 <p className="text-muted-foreground">
@@ -53,7 +55,13 @@ export function EvolutionSummaryCard({ data }: EvolutionSummaryProps) {
   );
 }
 
-function SummaryRow({
+
+function formatMetric(value: number | null): string {
+  if (value === null || Number.isNaN(value)) return '-';
+  return formatter.format(value);
+}
+
+function SummaryMetric({
   label,
   value,
   highlight,
@@ -63,14 +71,11 @@ function SummaryRow({
   highlight?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between text-xs">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={cn('font-medium text-foreground', highlight && 'text-primary')}>{value}</span>
+    <div className="rounded-md border border-border bg-background px-3 py-2 text-xs">
+      <span className="block text-muted-foreground">{label}</span>
+      <span className={cn('text-sm font-semibold text-foreground', highlight && 'text-primary')}>{value}</span>
     </div>
   );
 }
 
-function formatMetric(value: number | null): string {
-  if (value === null || Number.isNaN(value)) return '-';
-  return formatter.format(value);
-}
+
