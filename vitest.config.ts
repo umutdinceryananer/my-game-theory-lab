@@ -11,6 +11,14 @@ export default mergeConfig(
           singleFork: true,
         },
       },
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json-summary', 'lcov'],
+        reportsDirectory: 'coverage',
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['src/__tests__/**'],
+        all: true,
+      },
     },
   }),
 );

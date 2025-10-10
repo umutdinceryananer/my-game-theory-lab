@@ -52,7 +52,7 @@ export default function App() {
     populationSize: 12,
     generations: 5,
     selectionMethod: "tournament",
-    mutationOperator: "per-gene",
+    mutationOperator: "bit-flip",
     crossoverOperator: "single-point",
     mutationRate: 0.1,
     crossoverRate: 0.7,

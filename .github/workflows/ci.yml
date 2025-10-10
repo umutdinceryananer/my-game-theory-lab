@@ -21,4 +21,4 @@ jobs:
       - run: npm run typecheck --if-present
       - run: npm run lint:strict
       - run: npm run build
-      - run: npm test --if-present
+      - run: npm run test:coverage --if-present

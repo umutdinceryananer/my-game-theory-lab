@@ -26,11 +26,24 @@ export function EvolutionConfigPanel({
   onSeedClear,
   errors,
 }: EvolutionConfigPanelProps) {
+  const mutationOperatorOptions = useMemo(
+    () => [
+      { value: 'bit-flip', label: 'Bit flip', helper: 'Flips gene responses with a given probability.' },
+      { value: 'gaussian', label: 'Gaussian', helper: 'Perturbs gene weights using Gaussian noise.' },
+      { value: 'swap', label: 'Swap', helper: 'Swaps the positions of two genes when triggered.' },
+    ],
+    [],
+  );
+
   const elitismInvalid = settings.elitismCount >= settings.populationSize || settings.elitismCount < 0;
   const tournamentSizeValue = settings.tournamentSize ?? 3;
   const tournamentSizeInvalid =
     settings.selectionMethod === 'tournament' &&
     (tournamentSizeValue > settings.populationSize || tournamentSizeValue < 2);
+  const activeMutationOption = useMemo(
+    () => mutationOperatorOptions.find((option) => option.value === settings.mutationOperator) ?? mutationOperatorOptions[0],
+    [mutationOperatorOptions, settings.mutationOperator],
+  );
 
   const handleSetting = useCallback(
     <K extends keyof EvolutionSettings>(key: K, value: EvolutionSettings[K]) => {
@@ -110,7 +123,7 @@ export function EvolutionConfigPanel({
   const advancedFields = useMemo(
     () => (
       <div className="space-y-3">
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
             Selection method
             <select
@@ -149,6 +162,23 @@ export function EvolutionConfigPanel({
                 <p className="text-[0.65rem] text-destructive">Elitism count must be lower than population size.</p>
               )}
             </div>
+          </label>
+          <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
+            Mutation operator
+            <select
+              className="rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              value={settings.mutationOperator}
+              onChange={(event) =>
+                handleSetting('mutationOperator', event.target.value as EvolutionSettings['mutationOperator'])
+              }
+            >
+              {mutationOperatorOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-[0.65rem] text-muted-foreground">{activeMutationOption.helper}</span>
           </label>
         </div>
         {settings.selectionMethod === 'tournament' && (
@@ -209,6 +239,8 @@ export function EvolutionConfigPanel({
       elitismInvalid,
       seedOptions,
       selectedSeedNames,
+      activeMutationOption,
+      mutationOperatorOptions,
       handleSetting,
       onSeedToggle,
       onSeedSelectAll,
@@ -233,6 +265,10 @@ export function EvolutionConfigPanel({
     </div>
   );
 }
+
+
+
+
 
 
 

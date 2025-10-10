@@ -14,7 +14,7 @@ export type EvolutionSelectionMethod =
  * Mutation operators describe how child genomes should be mutated.
  * Specific implementations live under `src/strategies/genetic/operators.ts`.
  */
-export type EvolutionMutationOperator = 'per-gene' | 'per-bit' | 'swap';
+export type EvolutionMutationOperator = 'bit-flip' | 'gaussian' | 'swap';
 
 /**
  * Crossover operators describe how parent genomes should be combined.

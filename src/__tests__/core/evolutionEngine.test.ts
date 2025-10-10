@@ -16,7 +16,7 @@ function createSettings(overrides: Partial<EvolutionSettings> = {}): EvolutionSe
     populationSize: 4,
     generations: 2,
     selectionMethod: 'elitist',
-    mutationOperator: 'per-gene',
+    mutationOperator: 'bit-flip',
     crossoverOperator: 'single-point',
     mutationRate: 0,
     crossoverRate: 1,
@@ -102,6 +102,56 @@ describe('createBasicEvolutionEngine', () => {
     let mutationEvents = 0;
     const settings = createSettings({
       mutationOperator: 'swap',
+      mutationRate: 1,
+    });
+
+    const engine = createBasicEvolutionEngine({
+      settings,
+      seedPool: [introductoryGeneticConfig],
+      opponents: [stubOpponent],
+      hooks: {
+        onMutationApplied: () => {
+          mutationEvents += 1;
+        },
+      },
+    });
+
+    await engine.run({
+      evaluateFitness: () => 1,
+    });
+
+    expect(mutationEvents).toBeGreaterThan(0);
+  });
+
+  it('applies bit-flip mutation when configured', async () => {
+    let mutationEvents = 0;
+    const settings = createSettings({
+      mutationOperator: 'bit-flip',
+      mutationRate: 1,
+    });
+
+    const engine = createBasicEvolutionEngine({
+      settings,
+      seedPool: [introductoryGeneticConfig],
+      opponents: [stubOpponent],
+      hooks: {
+        onMutationApplied: () => {
+          mutationEvents += 1;
+        },
+      },
+    });
+
+    await engine.run({
+      evaluateFitness: () => 1,
+    });
+
+    expect(mutationEvents).toBeGreaterThan(0);
+  });
+
+  it('applies gaussian mutation when configured', async () => {
+    let mutationEvents = 0;
+    const settings = createSettings({
+      mutationOperator: 'gaussian',
       mutationRate: 1,
     });
 

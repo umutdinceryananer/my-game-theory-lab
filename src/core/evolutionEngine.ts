@@ -6,7 +6,8 @@ import type { TournamentFormat } from './tournament';
 import { cloneGeneticConfig, ensureGeneIds } from '@/strategies/genetic/utils';
 import { createGeneticStrategy } from '@/strategies/genetic';
 import {
-  mutateGenome as perGeneMutation,
+  bitFlipMutation,
+  gaussianMutation,
   singlePointCrossover,
   twoPointCrossover,
   uniformCrossover,
@@ -75,7 +76,7 @@ export function createBasicEvolutionEngine({
         const genome = ensureGeneIds(baseConfig.genome);
         const mutatedGenome =
           this.settings.mutationRate > 0
-            ? perGeneMutation(genome, { mutationRate: this.settings.mutationRate / 2, random })
+            ? bitFlipMutation(genome, { mutationRate: this.settings.mutationRate / 2, random })
             : genome;
         const config = {
           ...baseConfig,
@@ -407,16 +408,15 @@ export function createBasicEvolutionEngine({
       let mutatedGenome: Genome;
       switch (this.settings.mutationOperator) {
         case 'swap':
-          mutatedGenome = swapMutation(normalized, { mutationRate, random });
-          break;
-        case 'per-bit':
-        case 'per-gene':
-        default:
-          mutatedGenome = perGeneMutation(normalized, {
-            mutationRate,
-            random,
-          });
-          break;
+        mutatedGenome = swapMutation(normalized, { mutationRate, random });
+        break;
+      case 'gaussian':
+        mutatedGenome = gaussianMutation(normalized, { mutationRate, random });
+        break;
+      case 'bit-flip':
+      default:
+        mutatedGenome = bitFlipMutation(normalized, { mutationRate, random });
+        break;
       }
       const mutated = !this.genomesAreEqual(normalized, mutatedGenome);
       return { genome: mutatedGenome, mutated };
@@ -471,3 +471,5 @@ export function createBasicEvolutionEngine({
 
   return new BasicEvolutionEngine();
 }
+
+

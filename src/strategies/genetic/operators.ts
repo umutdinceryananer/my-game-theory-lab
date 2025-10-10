@@ -19,6 +19,49 @@ export function mutateGenome(genome: Genome, options: MutationOptions = {}): Gen
   return genome.map((gene) => mutateGene(gene, mutationRate, random));
 }
 
+export function bitFlipMutation(genome: Genome, options: MutationOptions = {}): Genome {
+  const mutationRate = options.mutationRate ?? 0.05;
+  const random = options.random ?? Math.random;
+
+  return genome.map((gene) => {
+    const clone = cloneGene(gene);
+    if (random() < mutationRate) {
+      clone.response = pickDifferentMove(clone.response, random);
+    }
+    return clone;
+  });
+}
+
+export function gaussianMutation(genome: Genome, options: MutationOptions = {}): Genome {
+  const mutationRate = options.mutationRate ?? 0.05;
+  const random = options.random ?? Math.random;
+
+  return genome.map((gene) => {
+    const clone = cloneGene(gene);
+    let mutated = false;
+
+    if (clone.weight !== undefined && random() < mutationRate) {
+      clone.weight = Math.max(0.05, roundTo(clone.weight + gaussianSample(random) * 0.5, 2));
+      mutated = true;
+    }
+
+    if (!mutated && random() < mutationRate * 0.5) {
+      clone.response = pickDifferentMove(clone.response, random);
+      mutated = true;
+    }
+
+    if (clone.condition.roundRange && random() < mutationRate * 0.5) {
+      const [start, end] = clone.condition.roundRange;
+      const delta = gaussianSample(random) * 2;
+      const nextStart = Math.max(1, Math.round(start + delta));
+      const nextEnd = Math.max(nextStart, Math.round(end + delta));
+      clone.condition.roundRange = [nextStart, nextEnd];
+    }
+
+    return clone;
+  });
+}
+
 export function singlePointCrossover(
   left: Genome,
   right: Genome,
@@ -201,6 +244,15 @@ function pickDifferentMove(current: Move, random: () => number): Move {
     candidate = MOVES[Math.floor(random() * MOVES.length)];
   }
   return candidate;
+}
+
+function gaussianSample(random: () => number): number {
+  // Box-Muller transform
+  let u1 = 0;
+  let u2 = 0;
+  while (u1 === 0) u1 = random();
+  while (u2 === 0) u2 = random();
+  return Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
 }
 
 function cloneGenome(genome: Genome): Genome {
