@@ -1,13 +1,9 @@
-import { useMemo, useCallback } from 'react';
-import { ChevronDown } from 'lucide-react';
-
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import type { EvolutionSettings } from '@/core/evolution';
-import type { GeneticStrategyConfig } from '@/strategies/genetic';
-import { EvolutionSeedManager } from './evolution-seed-manager';
+import { useMemo, useCallback } from "react";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import type { EvolutionSettings } from "@/core/evolution";
+import type { GeneticStrategyConfig } from "@/strategies/genetic";
+import { EvolutionSeedManager } from "./evolution-seed-manager";
 
 interface EvolutionConfigPanelProps {
   settings: EvolutionSettings;
@@ -17,8 +13,6 @@ interface EvolutionConfigPanelProps {
   onSeedToggle: (name: string) => void;
   onSeedSelectAll: () => void;
   onSeedClear: () => void;
-  collapsed: boolean;
-  onToggleCollapse: () => void;
   errors: string[];
 }
 
@@ -30,8 +24,6 @@ export function EvolutionConfigPanel({
   onSeedToggle,
   onSeedSelectAll,
   onSeedClear,
-  collapsed,
-  onToggleCollapse,
   errors,
 }: EvolutionConfigPanelProps) {
   const elitismInvalid = settings.elitismCount >= settings.populationSize || settings.elitismCount < 0;
@@ -224,35 +216,25 @@ export function EvolutionConfigPanel({
     ],
   );
 
-  return (
-    <Card>
-      <Button
-        type="button"
-        variant="ghost"
-        className="flex w-full items-center justify-between gap-2 border-b px-6 py-3 text-sm font-semibold uppercase text-muted-foreground"
-        onClick={onToggleCollapse}
-      >
-        <span>Evolution settings</span>
-        <ChevronDown className={cn('h-4 w-4 transition-transform', collapsed ? 'rotate-180' : 'rotate-0')} />
-      </Button>
-      {!collapsed && (
-        <CardContent className="space-y-4 pt-4">
-          {coreFields}
-          {advancedFields}
-          {errors.length > 0 && (
-            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
-              <p className="font-semibold">Evolution settings need attention:</p>
-              <ul className="mt-2 space-y-1 list-disc pl-4 text-destructive">
-                {errors.map((issue) => (
-                  <li key={issue}>{issue}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </CardContent>
+    return (
+    <div className="space-y-4">
+      {coreFields}
+      {advancedFields}
+      {errors.length > 0 && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+          <p className="font-semibold">Evolution settings need attention:</p>
+          <ul className="mt-2 space-y-1 list-disc pl-4 text-destructive">
+            {errors.map((issue) => (
+              <li key={issue}>{issue}</li>
+            ))}
+          </ul>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
+
+
+
 
 

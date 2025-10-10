@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Menu, X } from "lucide-react";
+import { Dna, Menu, X } from "lucide-react";
 
 import { SimulationParametersPanel } from "@/components/panels/simulation-parameters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { PayoffMatrix, Strategy } from "@/core/types";
 import type { TournamentFormat, TournamentResult, SwissRoundSummary } from "@/core/tournament";
 import { cn } from "@/lib/utils";
 import { getEvolutionSettingsIssues } from "@/lib/tournament";
 import { StrategyRosterSection } from "@/components/dashboard/strategy-roster-section";
 import { TournamentInsightsSection } from "@/components/dashboard/tournament-insights-section";
-import { EvolutionToggleCard } from "@/components/evolution/evolution-toggle-card";
 import { EvolutionConfigPanel } from "@/components/evolution/evolution-config-panel";
 import { EvolutionInsights } from "@/components/evolution/evolution-insights";
 import { GeneticStrategyEditor } from "@/components/genetic/genetic-strategy-editor";
@@ -101,10 +102,13 @@ export function TournamentDashboard({
 }: TournamentDashboardProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"simulation" | "evolution">("simulation");
   const [geneticEditorOpen, setGeneticEditorOpen] = useState(false);
-  const [evolutionConfigCollapsed, setEvolutionConfigCollapsed] = useState(true);
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+    setSettingsTab("simulation");
+  }, [setSettingsTab]);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => setIsVisible(true));
@@ -225,7 +229,10 @@ export function TournamentDashboard({
             <div className="flex items-center gap-3">
               <Button
                 variant="outline"
-                onClick={() => setSettingsOpen(true)}
+                onClick={() => {
+                  setSettingsTab("simulation");
+                  setSettingsOpen(true);
+                }}
                 className="flex items-center gap-2"
               >
                 <Menu className="h-4 w-4" />
@@ -262,26 +269,10 @@ export function TournamentDashboard({
           />
 
           <div className="space-y-4 rounded-lg border border-dashed border-muted p-4">
-            <EvolutionToggleCard
-              enabled={evolutionEnabled}
-              onToggle={onEvolutionEnabledChange}
-              toggleDisabled={isRunning}
-              minParticipants={minParticipants}
-              activeStrategyCount={activeStrategyCount}
-              onOpenGeneticEditor={() => setGeneticEditorOpen(true)}
-            />
-            <EvolutionConfigPanel
-              settings={evolutionSettings}
-              onSettingsChange={onEvolutionSettingsChange}
-              seedOptions={geneticSeedOptions}
-              selectedSeedNames={evolutionSeedNames}
-              onSeedToggle={handleSeedToggle}
-              onSeedSelectAll={handleSelectAllSeeds}
-              onSeedClear={handleClearSeeds}
-              collapsed={evolutionConfigCollapsed}
-              onToggleCollapse={() => setEvolutionConfigCollapsed((previous) => !previous)}
-              errors={evolutionConfigurationErrors}
-            />
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p className="font-semibold text-foreground">Evolution overview</p>
+              <p>Configure evolutionary mode inside the Simulation Settings modal.</p>
+            </div>
             <EvolutionInsights
               analytics={evolutionAnalytics}
               roundsPerMatch={roundsPerMatch}
@@ -330,23 +321,93 @@ export function TournamentDashboard({
             </Button>
           </div>
           <div className="max-h-[75vh] overflow-y-auto px-6 py-4">
-            <SimulationParametersPanel
-              rounds={roundsPerMatch}
-              onRoundsChange={onRoundsChange}
-              noiseEnabled={noiseEnabled}
-              onNoiseToggle={onNoiseToggle}
-              noisePercent={noisePercent}
-              onNoisePercentChange={onNoisePercentChange}
-              payoffMatrix={payoffMatrix}
-              onPayoffMatrixChange={onPayoffMatrixChange}
-              seedEnabled={seedEnabled}
-              seedValue={seedValue}
-              onSeedToggle={onSeedToggle}
-              onSeedChange={onSeedChange}
-              activeStrategyCount={activeStrategyCount}
-              tournamentFormat={tournamentFormat}
-              onTournamentFormatChange={onTournamentFormatChange}
-            />
+            <Tabs
+              value={settingsTab}
+              onValueChange={(value) => setSettingsTab(value as "simulation" | "evolution")}
+              className="space-y-4"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="simulation">Simulation</TabsTrigger>
+                <TabsTrigger value="evolution">Evolution</TabsTrigger>
+              </TabsList>
+              <TabsContent value="simulation" className="focus-visible:outline-none">
+                <SimulationParametersPanel
+                  rounds={roundsPerMatch}
+                  onRoundsChange={onRoundsChange}
+                  noiseEnabled={noiseEnabled}
+                  onNoiseToggle={onNoiseToggle}
+                  noisePercent={noisePercent}
+                  onNoisePercentChange={onNoisePercentChange}
+                  payoffMatrix={payoffMatrix}
+                  onPayoffMatrixChange={onPayoffMatrixChange}
+                  seedEnabled={seedEnabled}
+                  seedValue={seedValue}
+                  onSeedToggle={onSeedToggle}
+                  onSeedChange={onSeedChange}
+                  activeStrategyCount={activeStrategyCount}
+                  tournamentFormat={tournamentFormat}
+                  onTournamentFormatChange={onTournamentFormatChange}
+                />
+              </TabsContent>
+              <TabsContent value="evolution" className="focus-visible:outline-none">
+                <div className="space-y-6">
+                  <div className="space-y-4 rounded-lg border border-dashed border-muted/60 bg-muted/10 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase text-muted-foreground">Evolutionary mode</p>
+                        <p className="text-xs text-muted-foreground">
+                          Run genetic strategies prior to the tournament to evolve stronger contenders.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {evolutionEnabled ? "Enabled" : "Disabled"}
+                        </span>
+                        <Switch
+                          checked={evolutionEnabled}
+                          onCheckedChange={onEvolutionEnabledChange}
+                          aria-label="Toggle evolutionary mode"
+                          disabled={isRunning}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex items-center gap-2"
+                        onClick={() => setGeneticEditorOpen(true)}
+                        disabled={!evolutionEnabled}
+                      >
+                        <Dna className="h-4 w-4" aria-hidden="true" />
+                        Open genetic editor
+                      </Button>
+                      {isRunning && (
+                        <span className="text-xs text-muted-foreground">
+                          Evolution settings are locked while a tournament is running.
+                        </span>
+                      )}
+                    </div>
+                    {evolutionEnabled && insufficientOpponents && (
+                      <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                        Select at least {minParticipants} opponent
+                        {minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
+                      </div>
+                    )}
+                  </div>
+                  <EvolutionConfigPanel
+                    settings={evolutionSettings}
+                    onSettingsChange={onEvolutionSettingsChange}
+                    seedOptions={geneticSeedOptions}
+                    selectedSeedNames={evolutionSeedNames}
+                    onSeedToggle={handleSeedToggle}
+                    onSeedSelectAll={handleSelectAllSeeds}
+                    onSeedClear={handleClearSeeds}
+                    errors={evolutionConfigurationErrors}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </Card>
       </div>
