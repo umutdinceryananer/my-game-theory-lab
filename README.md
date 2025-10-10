@@ -1,5 +1,8 @@
 [![CI](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/umutdinceryananer/My-Game-Theory-Lab?display_name=tag&sort=semver)](https://github.com/umutdinceryananer/My-Game-Theory-Lab/releases)
+[![Deploy Pipeline](https://img.shields.io/github/actions/workflow/status/umutdinceryananer/My-Game-Theory-Lab/release.yml?label=deployment&logo=github)](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/release.yml)
+[![App Version](https://img.shields.io/github/package-json/v/umutdinceryananer/My-Game-Theory-Lab/main?label=app%20version)](package.json)
+[![React Version](https://img.shields.io/github/package-json/dependency-version/umutdinceryananer/My-Game-Theory-Lab/react?logo=react)](package.json)
+[![Node Target](https://img.shields.io/badge/node-20.x-339933?logo=node.js&logoColor=white)](https://github.com/umutdinceryananer/My-Game-Theory-Lab/blob/main/.github/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 # Game Theory Lab
@@ -53,9 +56,14 @@ Interactive React/Vite sandbox for the iterated Prisoner's Dilemma. Strategies f
 
 Grab the latest packaged build from the GitHub **Releases** page. After downloading the ZIP, extract it and serve the `dist/` folder with any static server of your choice.
 
+## Deployment Status
+
+- Automated GitHub Actions release workflow builds and zips the production bundle whenever a `v*.*.*` tag is pushed (see badge above for the latest status).
+- No live hosting target is configured yet; distribute the app by downloading the most recent release artifact or hosting the `dist/` folder manually.
+
 ## Roadmap
 
-- **Evolutionary tournament mode** – Data model and engine contract live in `src/core/evolution.ts`. Upcoming work will wire selection/mutation/crossover, population metrics, and UI controls.
+- **Evolutionary tournament mode** — Data model and engine contract live in `src/core/evolution.ts`. Upcoming work will wire selection/mutation/crossover, population metrics, and UI controls.
 - **Analytics enrichments** – Planned dashboards for gene activation counts, mutation impact, and evolutionary run summaries.
 - **Import/export** – Future builds may support saving and sharing genetic configurations.
 
