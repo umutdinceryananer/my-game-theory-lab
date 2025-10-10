@@ -3,6 +3,12 @@ import { Dna, Info, Play } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Strategy } from "@/core/types";
 import type { GeneticStrategyConfig } from "@/strategies/genetic";
@@ -204,15 +210,38 @@ export function StrategyRosterSection({
             className="sm:w-64"
             aria-label="Search strategies"
           />
-          <Button
-            size="sm"
-            className="flex items-center gap-2"
-            onClick={onRunTournament}
-            disabled={runButtonDisabled}
-          >
-            {!isRunning && <Play className="h-4 w-4" aria-hidden="true" />}
-            {runButtonLabel}
-          </Button>
+          <TooltipProvider delayDuration={150}>
+            {selectedStrategyNames.length < 2 && !isRunning ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex">
+                    <Button
+                      size="sm"
+                      className="flex h-10 items-center gap-2 px-4"
+                      onClick={onRunTournament}
+                      disabled={runButtonDisabled}
+                    >
+                      {!isRunning && <Play className="h-4 w-4" aria-hidden="true" />}
+                      {runButtonLabel}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" align="end">
+                  <p>Select at least two strategies to run the tournament.</p>
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                size="sm"
+                className="flex h-10 items-center gap-2 px-4"
+                onClick={onRunTournament}
+                disabled={runButtonDisabled}
+              >
+                {!isRunning && <Play className="h-4 w-4" aria-hidden="true" />}
+                {runButtonLabel}
+              </Button>
+            )}
+          </TooltipProvider>
         </div>
       </div>
 
