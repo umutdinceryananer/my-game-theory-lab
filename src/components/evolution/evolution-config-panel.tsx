@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,9 +40,12 @@ export function EvolutionConfigPanel({
     settings.selectionMethod === 'tournament' &&
     (tournamentSizeValue > settings.populationSize || tournamentSizeValue < 2);
 
-  const handleSetting = <K extends keyof EvolutionSettings>(key: K, value: EvolutionSettings[K]) => {
-    onSettingsChange({ ...settings, [key]: value });
-  };
+  const handleSetting = useCallback(
+    <K extends keyof EvolutionSettings>(key: K, value: EvolutionSettings[K]) => {
+      onSettingsChange({ ...settings, [key]: value });
+    },
+    [onSettingsChange, settings],
+  );
 
   const coreFields = useMemo(
     () => (
@@ -109,7 +112,7 @@ export function EvolutionConfigPanel({
         </label>
       </div>
     ),
-    [settings],
+    [settings, handleSetting],
   );
 
   const advancedFields = useMemo(
@@ -207,7 +210,18 @@ export function EvolutionConfigPanel({
         />
       </div>
     ),
-    [settings, tournamentSizeValue, tournamentSizeInvalid, elitismInvalid, seedOptions, selectedSeedNames],
+    [
+      settings,
+      tournamentSizeValue,
+      tournamentSizeInvalid,
+      elitismInvalid,
+      seedOptions,
+      selectedSeedNames,
+      handleSetting,
+      onSeedToggle,
+      onSeedSelectAll,
+      onSeedClear,
+    ],
   );
 
   return (
@@ -240,3 +254,5 @@ export function EvolutionConfigPanel({
     </Card>
   );
 }
+
+
