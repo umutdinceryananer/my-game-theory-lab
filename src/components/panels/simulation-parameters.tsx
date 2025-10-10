@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import type { PayoffMatrix } from '@/core/types';
 import type { TournamentFormat } from '@/core/tournament';
 import { cn } from '@/lib/utils';
+import { listPayoffPresets, type PayoffMatrixPreset } from '@/lib/payoffPresets';
 
 import { PayoffMatrixEditor } from './payoff-matrix-editor';
 
@@ -49,6 +50,39 @@ export function SimulationParametersPanel({
 }: SimulationParametersProps) {
   const [showNoiseSettings, setShowNoiseSettings] = useState(false);
   const [showPayoffSettings, setShowPayoffSettings] = useState(false);
+  const payoffPresets = useMemo<PayoffMatrixPreset[]>(() => listPayoffPresets(), []);
+  const [activePresetId, setActivePresetId] = useState<string | 'custom'>(() => {
+    const matching = payoffPresets.find(
+      (preset) =>
+        preset.matrix.temptation === payoffMatrix.temptation &&
+        preset.matrix.reward === payoffMatrix.reward &&
+        preset.matrix.punishment === payoffMatrix.punishment &&
+        preset.matrix.sucker === payoffMatrix.sucker,
+    );
+    return matching?.id ?? 'custom';
+  });
+  const handlePresetSelect = (presetId: string) => {
+    const preset = payoffPresets.find((item) => item.id === presetId);
+    if (!preset) return;
+    setActivePresetId(preset.id);
+    onPayoffMatrixChange(preset.matrix);
+  };
+  const isCustomPreset = activePresetId === 'custom';
+  const activePreset = useMemo<PayoffMatrixPreset | null>(() => {
+    if (isCustomPreset) return null;
+    return payoffPresets.find((item) => item.id === activePresetId) ?? null;
+  }, [activePresetId, isCustomPreset, payoffPresets]);
+
+  useEffect(() => {
+    const matching = payoffPresets.find(
+      (preset) =>
+        preset.matrix.temptation === payoffMatrix.temptation &&
+        preset.matrix.reward === payoffMatrix.reward &&
+        preset.matrix.punishment === payoffMatrix.punishment &&
+        preset.matrix.sucker === payoffMatrix.sucker,
+    );
+    setActivePresetId(matching?.id ?? 'custom');
+  }, [payoffMatrix, payoffPresets]);
 
   const payoffSummary = useMemo(
     () =>
@@ -104,6 +138,14 @@ export function SimulationParametersPanel({
 
   const handlePayoffChange = (next: PayoffMatrix) => {
     onPayoffMatrixChange(next);
+    const matching = payoffPresets.find(
+      (preset) =>
+        preset.matrix.temptation === next.temptation &&
+        preset.matrix.reward === next.reward &&
+        preset.matrix.punishment === next.punishment &&
+        preset.matrix.sucker === next.sucker,
+    );
+    setActivePresetId(matching?.id ?? 'custom');
   };
 
   const handleSeedInput = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,7 +385,33 @@ export function SimulationParametersPanel({
             <p className="text-sm font-medium text-muted-foreground">Payoff matrix (T, R, P, S)</p>
             <p className="text-xs text-muted-foreground">Control the reward structure for each round of play.</p>
           </div>
-          <span className="text-xs font-medium text-muted-foreground">{payoffSummary}</span>
+          <div className="flex flex-col gap-1 text-right">
+            <span className="text-xs font-medium text-muted-foreground">{payoffSummary}</span>
+            {activePreset ? (
+              <span className="text-[0.6rem] text-muted-foreground">{activePreset.description}</span>
+            ) : (
+              <span className="text-[0.6rem] text-muted-foreground">Custom reward structure</span>
+            )}
+            <label className="text-[0.65rem] uppercase text-muted-foreground" htmlFor="payoff-preset-select">
+              Preset
+            </label>
+            <select
+              id="payoff-preset-select"
+              className="rounded-md border border-muted bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              value={activePresetId}
+              onChange={(event) => handlePresetSelect(event.target.value)}
+              aria-label="Select payoff matrix preset"
+            >
+              {payoffPresets.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.name}
+                </option>
+              ))}
+              <option value="custom" disabled={!isCustomPreset}>
+                Custom
+              </option>
+            </select>
+          </div>
         </div>
         <Card className="border border-muted bg-background/50">
           <Button
@@ -359,9 +427,15 @@ export function SimulationParametersPanel({
           </Button>
           {showPayoffSettings && (
             <div className="space-y-3 px-4 pb-4 text-sm">
-              <p className="text-xs text-muted-foreground">
-                Classic dilemma ordering is T &gt; R &gt; P &gt; S. Experiment with different values to explore other games.
-              </p>
+              {activePreset ? (
+                <p className="text-xs text-muted-foreground">
+                  Editing these values will switch to a custom payoff matrix.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Classic dilemma ordering is T &gt; R &gt; P &gt; S. Experiment with different values to explore other 2x2 games.
+                </p>
+              )}
               <PayoffMatrixEditor value={payoffMatrix} onChange={handlePayoffChange} />
             </div>
           )}
@@ -369,4 +443,6 @@ export function SimulationParametersPanel({
       </div>
     </section>
   );
+
+
 }

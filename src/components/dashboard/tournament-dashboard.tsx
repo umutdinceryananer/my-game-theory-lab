@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { Dna, Menu, X } from "lucide-react";
 
 import { SimulationParametersPanel } from "@/components/panels/simulation-parameters";
@@ -103,6 +103,7 @@ export function TournamentDashboard({
   const [isVisible, setIsVisible] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<"simulation" | "evolution">("simulation");
+  const [insightsVisible, setInsightsVisible] = useState(() => !isRunning && Boolean(results?.length));
   const [geneticEditorOpen, setGeneticEditorOpen] = useState(false);
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
   const closeSettings = useCallback(() => {
@@ -210,6 +211,21 @@ export function TournamentDashboard({
   const insufficientOpponents = activeStrategyCount < minParticipants;
   const runButtonDisabled = runBlocked || insufficientOpponents || isRunning;
 
+  const handleRunTournament = useCallback(() => {
+    setInsightsVisible(false);
+    void onRunTournament();
+  }, [onRunTournament]);
+
+  useEffect(() => {
+    if (isRunning) {
+      setInsightsVisible(false);
+      return;
+    }
+    if (results && results.length > 0) {
+      setInsightsVisible(true);
+    }
+  }, [isRunning, results]);
+
   return (
     <>
       <Card
@@ -251,15 +267,16 @@ export function TournamentDashboard({
             totalStrategyCount={availableStrategies.length}
             geneticConfigs={geneticConfigs}
             onToggleStrategy={onToggleStrategy}
-            onSelectAll={onSelectAll}
-            onClearAll={onClearAll}
-            onAddStrategy={onAddStrategy}
-            onRemoveStrategy={onRemoveStrategy}
-            onRunTournament={() => void onRunTournament()}
-            runButtonDisabled={runButtonDisabled}
-            isRunning={isRunning}
-            evolutionEnabled={evolutionEnabled}
-          />
+          onSelectAll={onSelectAll}
+          onClearAll={onClearAll}
+          onAddStrategy={onAddStrategy}
+          onRemoveStrategy={onRemoveStrategy}
+          onRunTournament={handleRunTournament}
+          runButtonDisabled={runButtonDisabled}
+          isRunning={isRunning}
+          evolutionEnabled={evolutionEnabled}
+        />
+        <FadeSection active={insightsVisible}>
           <TournamentInsightsSection
             results={results}
             swissRounds={swissRounds}
@@ -267,7 +284,9 @@ export function TournamentDashboard({
             lastRunFormat={lastRunFormat}
             activeStrategyCount={activeStrategyCount}
           />
+        </FadeSection>
 
+        <FadeSection active={insightsVisible}>
           <div className="space-y-4 rounded-lg border border-dashed border-muted p-4">
             <div className="space-y-2 text-sm text-muted-foreground">
               <p className="font-semibold text-foreground">Evolution overview</p>
@@ -279,6 +298,7 @@ export function TournamentDashboard({
               enabled={evolutionEnabled}
             />
           </div>
+        </FadeSection>
         </CardContent>
       </Card>
 
@@ -412,5 +432,44 @@ export function TournamentDashboard({
         </Card>
       </div>
     </>
+  );
+}
+
+interface FadeSectionProps {
+  active: boolean;
+  children: ReactNode;
+}
+
+function FadeSection({ active, children }: FadeSectionProps) {
+  const [shouldRender, setShouldRender] = useState(active);
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    if (active) {
+      setShouldRender(true);
+    } else if (shouldRender) {
+      timeoutId = setTimeout(() => setShouldRender(false), 250);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [active, shouldRender]);
+
+  if (!shouldRender) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "transform transition-all duration-300",
+        active ? "opacity-100 translate-y-0" : "pointer-events-none opacity-0 -translate-y-2",
+      )}
+    >
+      {children}
+    </div>
   );
 }
