@@ -1,6 +1,7 @@
 import { useMemo, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { TooltipHint } from "@/components/ui/tooltip-hint";
 import { cn } from "@/lib/utils";
 import type { EvolutionSettings } from "@/core/evolution";
 import type { GeneticStrategyConfig } from "@/strategies/genetic";
@@ -65,7 +66,10 @@ export function EvolutionConfigPanel({
     () => (
       <div className="grid gap-3 md:grid-cols-2">
         <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-          Population size
+          <span className="flex items-center gap-1">
+            Population size
+            <TooltipHint id="evolution.population-size" />
+          </span>
           <Input
             type="number"
             min={2}
@@ -79,7 +83,10 @@ export function EvolutionConfigPanel({
           />
         </label>
         <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-          Generations
+          <span className="flex items-center gap-1">
+            Generations
+            <TooltipHint id="evolution.generations" />
+          </span>
           <Input
             type="number"
             min={1}
@@ -93,7 +100,10 @@ export function EvolutionConfigPanel({
           />
         </label>
         <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-          Mutation rate (0-1)
+          <span className="flex items-center gap-1">
+            Mutation rate (0-1)
+            <TooltipHint id="evolution.mutation-rate" />
+          </span>
           <Input
             type="number"
             min={0}
@@ -109,7 +119,10 @@ export function EvolutionConfigPanel({
           />
         </label>
         <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-          Crossover rate (0-1)
+          <span className="flex items-center gap-1">
+            Crossover rate (0-1)
+            <TooltipHint id="evolution.crossover-rate" />
+          </span>
           <Input
             type="number"
             min={0}
@@ -134,7 +147,10 @@ export function EvolutionConfigPanel({
       <div className="space-y-3">
         <div className="grid gap-3 md:grid-cols-3">
           <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-            Selection method
+            <span className="flex items-center gap-1">
+              Selection method
+              <TooltipHint id="evolution.selection-method" />
+            </span>
             <select
               className="rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               value={settings.selectionMethod}
@@ -149,7 +165,10 @@ export function EvolutionConfigPanel({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-            Elitism count
+            <span className="flex items-center gap-1">
+              Elitism count
+              <TooltipHint id="evolution.elitism-count" />
+            </span>
             <Input
               type="number"
               min={0}
@@ -164,16 +183,16 @@ export function EvolutionConfigPanel({
               }
             />
             <div className="space-y-1">
-              <p className="text-[0.65rem] text-muted-foreground">
-                Preserve top performers each generation (must be less than population size).
-              </p>
               {elitismInvalid && (
                 <p className="text-[0.65rem] text-destructive">Elitism count must be lower than population size.</p>
               )}
             </div>
           </label>
           <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-            Mutation operator
+            <span className="flex items-center gap-1">
+              Mutation operator
+              <TooltipHint id="evolution.mutation-operator" />
+            </span>
             <select
               className="rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
               value={settings.mutationOperator}
@@ -192,7 +211,10 @@ export function EvolutionConfigPanel({
         </div>
         <div className="flex items-center justify-between gap-3 rounded-md border border-muted bg-background/70 px-3 py-2">
           <div className="space-y-1">
-            <p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">Performance profiling</p>
+            <p className="flex items-center gap-1 text-[0.65rem] font-semibold uppercase text-muted-foreground">
+              Performance profiling
+              <TooltipHint id="evolution.profiling" />
+            </p>
             <p className="text-xs text-muted-foreground">
               Capture runtime metrics for each generation. Enabling this adds minimal overhead.
               {!evolutionEnabled && ' (Enable evolutionary mode first.)'}
@@ -208,7 +230,10 @@ export function EvolutionConfigPanel({
         {settings.selectionMethod === 'tournament' && (
           <div className="grid gap-3 md:grid-cols-2">
             <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-              Tournament size
+              <span className="flex items-center gap-1">
+                Tournament size
+                <TooltipHint id="evolution.tournament-size" />
+              </span>
               <Input
                 type="number"
                 min={2}
@@ -234,7 +259,10 @@ export function EvolutionConfigPanel({
               </div>
             </label>
             <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
-              Random seed (optional)
+              <span className="flex items-center gap-1">
+                Random seed (optional)
+                <TooltipHint id="evolution.random-seed" />
+              </span>
               <Input
                 value={settings.randomSeed?.toString() ?? ''}
                 onChange={(event) =>

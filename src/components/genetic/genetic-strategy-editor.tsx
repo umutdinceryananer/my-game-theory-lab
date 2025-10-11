@@ -23,6 +23,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { TooltipHint } from '@/components/ui/tooltip-hint';
 import type { Gene, GeneticStrategyConfig } from '@/strategies/genetic';
 import {
   canonicalizeConfigMap,
@@ -283,8 +284,8 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
             key={config.name}
             className='rounded-lg border border-dashed border-muted-foreground/40 p-4'
           >
-            <header className='flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between'>
-              <div>
+            <header className='flex flex-col gap-2'>
+              <div className='space-y-2'>
                 <h3 className='flex items-center gap-2 text-lg font-semibold leading-tight'>
                   {config.name}
                   <Badge variant='secondary' className='gap-1 uppercase'>
@@ -298,42 +299,40 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                   )}
                 </h3>
                 <p className='text-sm text-muted-foreground'>{config.description}</p>
-              </div>
-              <div className='grid w-full gap-2 sm:w-72'>
-                <label className='flex flex-col gap-1 text-xs font-medium uppercase text-muted-foreground'>
-                  Mutation rate (0-1)
-                  <Input
-                    type='number'
-                    step='0.01'
-                    min='0'
-                    max='1'
-                    value={config.mutationRate ?? ''}
-                    onChange={(event) =>
-                      handleRateChange(config.name, 'mutationRate', event.target.value)
-                    }
-                    aria-describedby={`${config.name}-mutation-hint`}
-                  />
-                  <span id={`${config.name}-mutation-hint`} className='text-[0.6rem] text-muted-foreground'>
-                    Defines how likely this genome mutates during evolutionary runs.
-                  </span>
-                </label>
-                <label className='flex flex-col gap-1 text-xs font-medium uppercase text-muted-foreground'>
-                  Crossover rate (0-1)
-                  <Input
-                    type='number'
-                    step='0.01'
-                    min='0'
-                    max='1'
-                    value={config.crossoverRate ?? ''}
-                    onChange={(event) =>
-                      handleRateChange(config.name, 'crossoverRate', event.target.value)
-                    }
-                    aria-describedby={`${config.name}-crossover-hint`}
-                  />
-                  <span id={`${config.name}-crossover-hint`} className='text-[0.6rem] text-muted-foreground'>
-                    Used when combining genomes to form new offspring strategies.
-                  </span>
-                </label>
+                <div className='grid gap-2 sm:grid-cols-2'>
+                  <label className='flex flex-col gap-1 text-xs font-medium uppercase text-muted-foreground'>
+                    <span className='flex items-center gap-1'>
+                      Mutation rate (0-1)
+                      <TooltipHint id='genetic.mutation-rate' />
+                    </span>
+                    <Input
+                      type='number'
+                      step='0.01'
+                      min='0'
+                      max='1'
+                      value={config.mutationRate ?? ''}
+                      onChange={(event) =>
+                        handleRateChange(config.name, 'mutationRate', event.target.value)
+                      }
+                    />
+                  </label>
+                  <label className='flex flex-col gap-1 text-xs font-medium uppercase text-muted-foreground'>
+                    <span className='flex items-center gap-1'>
+                      Crossover rate (0-1)
+                      <TooltipHint id='genetic.crossover-rate' />
+                    </span>
+                    <Input
+                      type='number'
+                      step='0.01'
+                      min='0'
+                      max='1'
+                      value={config.crossoverRate ?? ''}
+                      onChange={(event) =>
+                        handleRateChange(config.name, 'crossoverRate', event.target.value)
+                      }
+                    />
+                  </label>
+                </div>
               </div>
             </header>
             <div className='mt-4 space-y-3 text-xs text-muted-foreground'>
@@ -409,8 +408,42 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                       {isExpanded && (
                         <div className='space-y-3 p-3 pt-4'>
                           <div className='grid gap-3 sm:grid-cols-2'>
+                            <label className='flex flex-col gap-1 text-xs font-medium uppercase text-muted-foreground'>
+              Mutation rate (0-1)
+              <TooltipHint id='genetic.mutation-rate' />
+              <Input
+                type='number'
+                step='0.01'
+                min='0'
+                max='1'
+                value={config.mutationRate ?? ''}
+                onChange={(event) =>
+                  handleRateChange(config.name, 'mutationRate', event.target.value)
+                }
+              />
+                            </label>
+                            <label className='flex flex-col gap-1 text-xs font-medium uppercase text-muted-foreground'>
+              Crossover rate (0-1)
+              <TooltipHint id='genetic.crossover-rate' />
+              <Input
+                type='number'
+                step='0.01'
+                min='0'
+                max='1'
+                value={config.crossoverRate ?? ''}
+                onChange={(event) =>
+                  handleRateChange(config.name, 'crossoverRate', event.target.value)
+                }
+              />
+                            </label>
+          </div>
+
+                          <div className='grid gap-3 sm:grid-cols-2'>
                             <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                              Response
+                              <span className='flex items-center gap-1'>
+                                Response
+                                <TooltipHint id='genetic.response' />
+                              </span>
                               <select
                                 className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
                                 value={gene.response}
@@ -426,7 +459,10 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                               </select>
                             </label>
                             <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                              Weight
+                              <span className='flex items-center gap-1'>
+                                Weight
+                                <TooltipHint id='genetic.weight' />
+                              </span>
                               <Input
                                 type='number'
                                 step='0.1'
@@ -440,7 +476,10 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                           </div>
                           <div className='grid gap-3 sm:grid-cols-2'>
                             <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                              Opponent last move
+                              <span className='flex items-center gap-1'>
+                                Opponent last move
+                                <TooltipHint id='genetic.opponent-last-move' />
+                              </span>
                               <select
                                 className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
                                 value={gene.condition.opponentLastMove ?? ''}
@@ -457,7 +496,10 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                               </select>
                             </label>
                             <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                              Self last move
+                              <span className='flex items-center gap-1'>
+                                Self last move
+                                <TooltipHint id='genetic.self-last-move' />
+                              </span>
                               <select
                                 className='rounded-md border border-muted bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background'
                                 value={gene.condition.selfLastMove ?? ''}
@@ -476,7 +518,10 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                           </div>
                           <div className='grid gap-3 sm:grid-cols-2'>
                             <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                              Round start
+                              <span className='flex items-center gap-1'>
+                                Round start
+                                <TooltipHint id='genetic.round-start' />
+                              </span>
                               <Input
                                 type='number'
                                 min='1'
@@ -487,7 +532,10 @@ export function GeneticStrategyEditor({ configs, onClose, onSave }: GeneticStrat
                               />
                             </label>
                             <label className='flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground'>
-                              Round end
+                              <span className='flex items-center gap-1'>
+                                Round end
+                                <TooltipHint id='genetic.round-end' />
+                              </span>
                               <Input
                                 type='number'
                                 min='1'
