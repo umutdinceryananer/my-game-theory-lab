@@ -29,12 +29,28 @@ export function EvolutionInsights({
   const handleChartReady = useCallback((chart: ChartJS<'line'> | null) => {
     chartRef.current = chart;
     setIsChartReady(Boolean(chart));
-  }, [setIsChartReady]);
+  }, []);
 
   const handleExport = useCallback(() => {
-    if (!chartRef.current) {
+    const chart = chartRef.current;
+    if (!chart) {
       return;
     }
+
+    const dataUrl = chart.toBase64Image('image/png', 1);
+    if (!dataUrl) {
+      return;
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `evolution-trend-${timestamp}.png`;
+
+    const link = document.createElement('a');
+    link.href = dataUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   }, []);
 
   if (!enabled || !analytics.hasHistory) {
