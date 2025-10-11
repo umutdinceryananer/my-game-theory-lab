@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LandingScreen } from "@/components/landing-screen";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix, type Strategy } from "@/core/types";
 import {
   DEFAULT_TOURNAMENT_FORMAT,
@@ -417,6 +418,8 @@ export default function App() {
   );
 
   return (
+    <TooltipProvider delayDuration={150} skipDelayDuration={250}>
+      
     <div className="min-h-screen bg-background text-foreground">
       <main className="mx-auto flex min-h-screen w-full max-w-4xl lg:max-w-6xl flex-col justify-center px-6 py-12">
         {hasStarted ? (
@@ -466,6 +469,7 @@ export default function App() {
         )}
       </main>
     </div>
+    </TooltipProvider>
   );
 }
 
