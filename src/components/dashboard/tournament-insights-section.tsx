@@ -12,7 +12,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
 import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
 import type { TournamentFormat, TournamentResult, SwissRoundSummary } from "@/core/tournament";
@@ -26,6 +25,7 @@ interface TournamentInsightsSectionProps {
   tournamentFormat: TournamentFormat;
   lastRunFormat: TournamentFormat | null;
   activeStrategyCount: number;
+  onExport?: (format: "csv" | "json") => void;
 }
 
 export function TournamentInsightsSection({
@@ -34,6 +34,7 @@ export function TournamentInsightsSection({
   tournamentFormat,
   lastRunFormat,
   activeStrategyCount,
+  onExport,
 }: TournamentInsightsSectionProps) {
   const [activeInsightsPanel, setActiveInsightsPanel] = useState<"standings" | "heatmap">("standings");
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
@@ -108,6 +109,11 @@ export function TournamentInsightsSection({
     }
   }, [hasResults]);
 
+  const handleExport = useCallback(() => {
+    if (!onExport || !hasResults) return;
+    onExport(exportFormat);
+  }, [exportFormat, hasResults, onExport]);
+
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -126,21 +132,39 @@ export function TournamentInsightsSection({
           <p className="text-xs text-muted-foreground">{formatLabel}</p>
         </div>
         <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-          <Select
-            value={exportFormat}
-            onValueChange={(value) => setExportFormat(value as "csv" | "json")}
+          <div className="flex rounded-md border border-muted/60 p-0.5">
+            <Button
+              type="button"
+              size="sm"
+              variant={exportFormat === "csv" ? "secondary" : "ghost"}
+              className="px-3"
+              disabled={!hasResults}
+              onClick={() => setExportFormat("csv")}
+              aria-pressed={exportFormat === "csv"}
+            >
+              CSV
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={exportFormat === "json" ? "secondary" : "ghost"}
+              className="px-3"
+              disabled={!hasResults}
+              onClick={() => setExportFormat("json")}
+              aria-pressed={exportFormat === "json"}
+            >
+              JSON
+            </Button>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
             disabled={!hasResults}
+            className="gap-2"
+            onClick={handleExport}
           >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Export format" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="csv">CSV</SelectItem>
-              <SelectItem value="json">JSON</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button type="button" variant="outline" size="sm" disabled={!hasResults} className="gap-2">
-            <Download className="h-4 w-4" />
+            <Download className="h-4 w-4" aria-hidden="true" />
             Download standings
           </Button>
         </div>

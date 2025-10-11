@@ -35,6 +35,7 @@ type TournamentDashboardProps = {
   swissRounds: SwissRoundSummary[] | null;
   onRunTournament: () => Promise<void>;
   roundsPerMatch: number;
+  onExportResults?: (format: "csv" | "json") => void;
   onRoundsChange: (value: number) => void;
   noiseEnabled: boolean;
   onNoiseToggle: (enabled: boolean) => void;
@@ -77,6 +78,7 @@ export function TournamentDashboard({
   onRunTournament,
   roundsPerMatch,
   onRoundsChange,
+  onExportResults,
   noiseEnabled,
   onNoiseToggle,
   noisePercent,
@@ -293,6 +295,7 @@ export function TournamentDashboard({
             tournamentFormat={tournamentFormat}
             lastRunFormat={lastRunFormat}
             activeStrategyCount={activeStrategyCount}
+            onExport={onExportResults}
           />
         </FadeSection>
 

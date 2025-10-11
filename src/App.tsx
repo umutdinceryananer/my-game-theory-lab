@@ -11,6 +11,7 @@ import { simulateTournament } from "@/test-game";
 import { baseStrategies } from "@/strategies";
 import type { GeneticStrategyConfig } from "@/strategies/genetic";
 import { createGeneticStrategy, geneticStrategyConfigs } from "@/strategies/genetic";
+import { serializeTournamentToCSV, serializeTournamentToJSON, type TournamentExportParameters, type TournamentExportPayload } from "@/lib/export/tournament";
 import { cloneGeneticConfigMap } from "@/strategies/genetic/utils";
 import { createBasicEvolutionEngine } from "@/core/evolution";
 import type { EvolutionSettings, EvolutionSummary } from "@/core/evolution";
@@ -40,6 +41,7 @@ export default function App() {
     DEFAULT_TOURNAMENT_FORMAT,
   );
   const [lastRunFormat, setLastRunFormat] = useState<TournamentFormat | null>(null);
+  const [lastRunParameters, setLastRunParameters] = useState<TournamentExportParameters | null>(null);
   const [strategySearch, setStrategySearch] = useState("");
   const [geneticConfigs, setGeneticConfigs] = useState<GeneticConfigMap>(() =>
     cloneGeneticConfigMap(geneticStrategyConfigs)
@@ -145,6 +147,7 @@ export default function App() {
         }
       }
 
+      setLastRunParameters(null);
       setIsRunning(true);
       try {
         const errorRate = noiseEnabled ? noisePercent / 100 : 0;
@@ -152,6 +155,8 @@ export default function App() {
           seedEnabled && seedValue.trim().length > 0
             ? seedValue.trim()
             : undefined;
+
+        const payoffSnapshot: PayoffMatrix = { ...payoffMatrix };
 
         if (evolutionEnabled) {
           try {
@@ -163,7 +168,7 @@ export default function App() {
                 fitness: {
                   rounds: roundsPerMatch,
                   errorRate,
-                  payoffMatrix,
+                  payoffMatrix: payoffSnapshot,
                   format: tournamentFormat,
                 },
               });
@@ -181,13 +186,23 @@ export default function App() {
                 const outcome = simulateTournament({
                   rounds: roundsPerMatch,
                   errorRate,
-                  payoffMatrix,
+                  payoffMatrix: payoffSnapshot,
                   seed,
                   format: tournamentFormat,
                   strategies: finalStrategies,
                 });
                 setTournamentOutcome(outcome);
                 setLastRunFormat(outcome.format);
+                setLastRunParameters({
+                  roundsPerMatch,
+                  noiseEnabled,
+                  noisePercent,
+                  payoffMatrix: { ...payoffSnapshot },
+                  seedEnabled,
+                  seedValue: seed ?? "",
+                  format: outcome.format,
+                  strategyNames: finalStrategies.map((strategy) => strategy.name),
+                });
                 return;
               }
             }
@@ -201,13 +216,23 @@ export default function App() {
         const outcome = simulateTournament({
           rounds: roundsPerMatch,
           errorRate,
-          payoffMatrix,
+          payoffMatrix: payoffSnapshot,
           seed,
           format: tournamentFormat,
           strategies: activeStrategies,
         });
         setTournamentOutcome(outcome);
         setLastRunFormat(outcome.format);
+        setLastRunParameters({
+          roundsPerMatch,
+          noiseEnabled,
+          noisePercent,
+          payoffMatrix: { ...payoffSnapshot },
+          seedEnabled,
+          seedValue: seed ?? "",
+          format: outcome.format,
+          strategyNames: activeStrategies.map((strategy) => strategy.name),
+        });
       } finally {
         setIsRunning(false);
       }
@@ -331,6 +356,40 @@ export default function App() {
     );
   }, []);
 
+  const handleExportResults = useCallback(
+    (format: "csv" | "json") => {
+      if (!tournamentOutcome || !lastRunParameters) {
+        return;
+      }
+
+      const payload: TournamentExportPayload = {
+        outcome: tournamentOutcome,
+        parameters: lastRunParameters,
+      };
+
+      const content = format === "csv"
+        ? serializeTournamentToCSV(payload)
+        : serializeTournamentToJSON(payload);
+      const blob = new Blob([content], {
+        type: format === "csv"
+          ? "text/csv;charset=utf-8"
+          : "application/json;charset=utf-8",
+      });
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filename = `tournament-${timestamp}.${format}`;
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    },
+    [lastRunParameters, tournamentOutcome],
+  );
+
   useEffect(() => {
     if (!evolutionEnabled) return;
     const geneticSet = new Set(geneticStrategyNames);
@@ -378,6 +437,7 @@ export default function App() {
             onRunTournament={runTournament}
             roundsPerMatch={roundsPerMatch}
             onRoundsChange={setRoundsPerMatch}
+            onExportResults={handleExportResults}
             noiseEnabled={noiseEnabled}
             onNoiseToggle={setNoiseEnabled}
             noisePercent={noisePercent}
