@@ -2,12 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { processEloMatches, updateEloRating } from "@/lib/rating/elo";
 
-const TOLERANCE = 1e-6;
-
-function isClose(a: number, b: number): boolean {
-  return Math.abs(a - b) < TOLERANCE;
-}
-
 describe("updateEloRating", () => {
   it("returns baseline rating when no outcome", () => {
     const next = updateEloRating(undefined, undefined, "draw");
