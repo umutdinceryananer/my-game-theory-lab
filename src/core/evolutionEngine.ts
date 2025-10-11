@@ -79,9 +79,10 @@ export function createBasicEvolutionEngine({
         const seed = seedPool[index % seedPool.length];
         const baseConfig = cloneGeneticConfig(seed);
         const genome = ensureGeneIds(baseConfig.genome);
+        const mutationRate = this.resolveMutationRate(baseConfig);
         const mutatedGenome =
-          this.settings.mutationRate > 0
-            ? bitFlipMutation(genome, { mutationRate: this.settings.mutationRate / 2, random })
+          mutationRate > 0
+            ? bitFlipMutation(genome, { mutationRate: mutationRate / 2, random })
             : genome;
         const config = {
           ...baseConfig,
@@ -293,7 +294,7 @@ export function createBasicEvolutionEngine({
 
       while (nextPopulation.length < this.settings.populationSize) {
         const parents = this.selectParents(sorted, random);
-        const crossoverRate = Math.min(Math.max(this.settings.crossoverRate ?? 1, 0), 1);
+        const crossoverRate = this.resolveCrossoverRate(parents);
         const canCrossover = crossoverRate > 0;
         const shouldCrossover = canCrossover && random() < crossoverRate;
         const offspringGenomes = shouldCrossover
@@ -304,7 +305,17 @@ export function createBasicEvolutionEngine({
         }
         offspringGenomes.forEach((genome) => {
           if (nextPopulation.length >= this.settings.populationSize) return;
-          const { genome: mutatedGenome, mutated } = this.applyMutation(genome, random);
+          const effectiveMutationRate =
+            parents.length > 0
+              ? parents
+                  .map((parent) => this.resolveMutationRate(parent.config))
+                  .reduce((sum, value) => sum + value, 0) / parents.length
+              : this.resolveMutationRate();
+          const { genome: mutatedGenome, mutated } = this.applyMutation(
+            genome,
+            random,
+            effectiveMutationRate,
+          );
           if (mutated) {
             mutationEvents += 1;
           }
@@ -427,12 +438,14 @@ export function createBasicEvolutionEngine({
     private applyMutation(
       genome: Genome,
       random: () => number,
+      overrideRate?: number,
     ): { genome: Genome; mutated: boolean } {
       const normalized = ensureGeneIds(genome);
-      if (this.settings.mutationRate <= 0) {
+      const baseRate = overrideRate ?? this.settings.mutationRate ?? 0;
+      if (baseRate <= 0) {
         return { genome: normalized, mutated: false };
       }
-      const mutationRate = Math.min(Math.max(this.settings.mutationRate ?? 0, 0), 1);
+      const mutationRate = Math.min(Math.max(baseRate, 0), 1);
       let mutatedGenome: Genome;
       switch (this.settings.mutationOperator) {
         case 'swap':
@@ -494,6 +507,25 @@ export function createBasicEvolutionEngine({
         return leftRange === rightRange;
       }
       return leftRange[0] === rightRange[0] && leftRange[1] === rightRange[1];
+    }
+
+    private resolveMutationRate(config?: GeneticStrategyConfig): number {
+      const rate =
+        config && typeof config.mutationRate === 'number' && Number.isFinite(config.mutationRate)
+          ? config.mutationRate
+          : this.settings.mutationRate;
+      return Math.min(Math.max(rate ?? 0, 0), 1);
+    }
+
+    private resolveCrossoverRate(parents: PopulationIndividual[]): number {
+      const parentRates = parents
+        .map((parent) => parent.config.crossoverRate)
+        .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
+      const baseRate =
+        parentRates.length > 0
+          ? parentRates.reduce((sum, value) => sum + value, 0) / parentRates.length
+          : this.settings.crossoverRate;
+      return Math.min(Math.max(baseRate ?? 1, 0), 1);
     }
   }
 
