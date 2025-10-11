@@ -31,6 +31,32 @@ export const tooltipRegistry = {
     description:
       "Choose between round-robin or Swiss style. Swiss pairing adds tie-breakers and per-round snapshots.",
   },
+  "tournament.single-round-robin": {
+    title: "Single round-robin",
+    description: "Every strategy plays each other exactly once. Fast overview with minimal matches.",
+  },
+  "tournament.double-round-robin": {
+    title: "Double round-robin",
+    description:
+      "Each pairing is played twice, swapping positions. Useful when noise or asymmetric strategies are in play.",
+  },
+  "tournament.swiss": {
+    title: "Swiss pairing",
+    description:
+      "Strategies are matched against opponents with similar scores across limited rounds. Configure rounds and tie-breakers below.",
+  },
+  "tournament.tie-breaker.total-score": {
+    title: "Total score",
+    description: "Sorts by aggregate points earned. Fast but ignores opponent strength.",
+  },
+  "tournament.tie-breaker.buchholz": {
+    title: "Buchholz",
+    description: "Adds the scores of opponents you faced. Rewards beating stronger competition.",
+  },
+  "tournament.tie-breaker.sonneborn": {
+    title: "Sonneborn-Berger",
+    description: "Weights wins against high-scorers more heavily by summing opponent scores scaled by results.",
+  },
 } as const satisfies Record<string, TooltipEntry>;
 
 export function getTooltipEntry(id: TooltipIdentifier): TooltipEntry {

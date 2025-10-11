@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { TooltipReference } from '@/components/ui/tooltip-reference';
 import type { PayoffMatrix } from '@/core/types';
 import type { TournamentFormat } from '@/core/tournament';
 import { cn } from '@/lib/utils';
@@ -104,9 +105,9 @@ export function SimulationParametersPanel({
     tournamentFormat.kind === 'swiss' ? tournamentFormat.tieBreaker ?? 'total-score' : 'total-score';
 
   const tieBreakerOptions = [
-    { value: 'total-score', label: 'Total score' },
-    { value: 'buchholz', label: 'Buchholz' },
-    { value: 'sonneborn-berger', label: 'Sonneborn-Berger' },
+    { value: 'total-score', label: 'Total score', tooltip: 'tournament.tie-breaker.total-score' },
+    { value: 'buchholz', label: 'Buchholz', tooltip: 'tournament.tie-breaker.buchholz' },
+    { value: 'sonneborn-berger', label: 'Sonneborn-Berger', tooltip: 'tournament.tie-breaker.sonneborn' },
   ] as const;
 
   const handleRoundsInput = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -225,43 +226,49 @@ export function SimulationParametersPanel({
           <div>
             <p className="text-sm font-medium text-muted-foreground">Tournament format</p>
             <p className="text-xs text-muted-foreground">
-              Choose how strategies pair up; Swiss adds round-based pairings with configurable depth.
+              Decide how strategies are paired. Round-robin modes face every opponent, while Swiss re-pairs competitors with similar scores each round.
             </p>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
-            <Button
-              type="button"
-              variant={tournamentFormat.kind === 'single-round-robin' ? 'default' : 'outline'}
-              aria-pressed={tournamentFormat.kind === 'single-round-robin'}
-              onClick={() => onTournamentFormatChange({ kind: 'single-round-robin' })}
-            >
-              Single round-robin
-            </Button>
-            <Button
-              type="button"
-              variant={tournamentFormat.kind === 'double-round-robin' ? 'default' : 'outline'}
-              aria-pressed={tournamentFormat.kind === 'double-round-robin'}
-              onClick={() => onTournamentFormatChange({ kind: 'double-round-robin' })}
-            >
-              Double round-robin
-            </Button>
-            <Button
-              type="button"
-              variant={tournamentFormat.kind === 'swiss' ? 'default' : 'outline'}
-              aria-pressed={tournamentFormat.kind === 'swiss'}
-              onClick={() =>
-                onTournamentFormatChange({
-                  kind: 'swiss',
-                  rounds:
-                    tournamentFormat.kind === 'swiss'
-                      ? tournamentFormat.rounds ?? suggestedSwissRounds
-                      : suggestedSwissRounds,
-                  tieBreaker: activeTieBreaker,
-                })
-              }
-            >
-              Swiss pairing
-            </Button>
+            <TooltipReference id="tournament.single-round-robin">
+              <Button
+                type="button"
+                variant={tournamentFormat.kind === 'single-round-robin' ? 'default' : 'outline'}
+                aria-pressed={tournamentFormat.kind === 'single-round-robin'}
+                onClick={() => onTournamentFormatChange({ kind: 'single-round-robin' })}
+              >
+                Single round-robin
+              </Button>
+            </TooltipReference>
+            <TooltipReference id="tournament.double-round-robin">
+              <Button
+                type="button"
+                variant={tournamentFormat.kind === 'double-round-robin' ? 'default' : 'outline'}
+                aria-pressed={tournamentFormat.kind === 'double-round-robin'}
+                onClick={() => onTournamentFormatChange({ kind: 'double-round-robin' })}
+              >
+                Double round-robin
+              </Button>
+            </TooltipReference>
+            <TooltipReference id="tournament.swiss">
+              <Button
+                type="button"
+                variant={tournamentFormat.kind === 'swiss' ? 'default' : 'outline'}
+                aria-pressed={tournamentFormat.kind === 'swiss'}
+                onClick={() =>
+                  onTournamentFormatChange({
+                    kind: 'swiss',
+                    rounds:
+                      tournamentFormat.kind === 'swiss'
+                        ? tournamentFormat.rounds ?? suggestedSwissRounds
+                        : suggestedSwissRounds,
+                    tieBreaker: activeTieBreaker,
+                  })
+                }
+              >
+                Swiss pairing
+              </Button>
+            </TooltipReference>
           </div>
           {tournamentFormat.kind === 'swiss' && (
             <div className="space-y-3">
@@ -291,7 +298,8 @@ export function SimulationParametersPanel({
                 <p className="text-xs font-medium text-muted-foreground">Tie-breaker</p>
                 <div className="flex flex-wrap gap-2">
                   {tieBreakerOptions.map((option) => (
-                    <Button
+                    <TooltipReference key={option.value} id={option.tooltip}>
+                      <Button
                       key={option.value}
                       type="button"
                       size="sm"
@@ -310,6 +318,7 @@ export function SimulationParametersPanel({
                     >
                       {option.label}
                     </Button>
+                    </TooltipReference>
                   ))}
                 </div>
               </div>
