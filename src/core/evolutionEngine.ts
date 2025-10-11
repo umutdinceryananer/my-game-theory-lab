@@ -25,6 +25,11 @@ import type {
 } from './evolution';
 import type { GeneticStrategyConfig, Genome } from '@/strategies/genetic';
 
+const now = (): number =>
+  typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+
 interface FitnessOptions {
   rounds?: number;
   errorRate?: number;
@@ -137,8 +142,12 @@ export function createBasicEvolutionEngine({
       let bestIndividual: PopulationIndividual | null = null;
       let mutationEvents = 0;
       let crossoverEvents = 0;
+      const profilingEnabled = Boolean(this.settings.profilingEnabled);
+      const runStart = profilingEnabled ? now() : 0;
+      const generationDurations: number[] = [];
 
       for (let generation = 0; generation < this.settings.generations; generation += 1) {
+        const generationStart = profilingEnabled ? now() : 0;
         const context = this.buildContext(generation, history, random);
         this.hooks?.onGenerationStart?.(context);
 
@@ -150,6 +159,11 @@ export function createBasicEvolutionEngine({
 
         // Metrics & snapshot
         const metrics = this.computeMetrics(currentPopulation, mutationEvents, crossoverEvents);
+        const generationRuntime = profilingEnabled ? now() - generationStart : undefined;
+        if (generationRuntime !== undefined) {
+          metrics.runtimeMs = generationRuntime;
+          generationDurations.push(generationRuntime);
+        }
         const clonedPopulation = currentPopulation.map((individual) => ({
           ...individual,
           config: cloneGeneticConfig(individual.config),
@@ -179,6 +193,8 @@ export function createBasicEvolutionEngine({
         crossoverEvents = next.crossoverEvents;
       }
 
+      const totalRuntime = profilingEnabled ? now() - runStart : undefined;
+
       return {
         bestIndividual,
         finalPopulation: currentPopulation.map((individual) => ({
@@ -188,6 +204,18 @@ export function createBasicEvolutionEngine({
         })),
         history,
         settings: this.settings,
+        runtimeMetrics:
+          totalRuntime !== undefined
+            ? {
+                totalRuntimeMs: totalRuntime,
+                averageGenerationMs:
+                  generationDurations.length > 0
+                    ? generationDurations.reduce((sum, value) => sum + value, 0) /
+                      generationDurations.length
+                    : 0,
+                generationDurations,
+              }
+            : undefined,
       };
     }
 

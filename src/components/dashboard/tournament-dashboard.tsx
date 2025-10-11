@@ -164,6 +164,12 @@ export function TournamentDashboard({
     () => geneticSeedOptions.map((config) => config.name),
     [geneticSeedOptions],
   );
+  const runtimeMetrics = evolutionSummary?.runtimeMetrics ?? null;
+  const totalRuntimeDisplay = formatDuration(runtimeMetrics?.totalRuntimeMs);
+  const averageGenerationDisplay = formatDuration(runtimeMetrics?.averageGenerationMs);
+  const generationCountDisplay = runtimeMetrics
+    ? runtimeMetrics.generationDurations.length.toString()
+    : "0";
   const handleSeedToggle = useCallback(
     (name: string) => {
       const nameSet = new Set(evolutionSeedNames);
@@ -288,14 +294,23 @@ export function TournamentDashboard({
 
         <FadeSection active={insightsVisible}>
           <div className="space-y-4 rounded-lg border border-dashed border-muted p-4">
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p className="font-semibold text-foreground">Evolution overview</p>
-              <p>Configure evolutionary mode inside the Simulation Settings modal.</p>
+            <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-semibold text-foreground">Evolution overview</p>
+                <p>Configure evolutionary mode inside the Simulation Settings modal.</p>
+              </div>
+              <div className="grid gap-2 text-right text-xs sm:grid-cols-3 sm:text-left">
+                <RuntimeMetric label="Total" value={totalRuntimeDisplay} />
+                <RuntimeMetric label="Avg gen" value={averageGenerationDisplay} />
+                <RuntimeMetric label="Generations" value={generationCountDisplay} />
+              </div>
             </div>
             <EvolutionInsights
               analytics={evolutionAnalytics}
               roundsPerMatch={roundsPerMatch}
               enabled={evolutionEnabled}
+              runtimeMetrics={runtimeMetrics}
+              profilingEnabled={evolutionSettings.profilingEnabled ?? false}
             />
           </div>
         </FadeSection>
@@ -415,16 +430,17 @@ export function TournamentDashboard({
                       </div>
                     )}
                   </div>
-                  <EvolutionConfigPanel
-                    settings={evolutionSettings}
-                    onSettingsChange={onEvolutionSettingsChange}
-                    seedOptions={geneticSeedOptions}
-                    selectedSeedNames={evolutionSeedNames}
-                    onSeedToggle={handleSeedToggle}
-                    onSeedSelectAll={handleSelectAllSeeds}
-                    onSeedClear={handleClearSeeds}
-                    errors={evolutionConfigurationErrors}
-                  />
+                <EvolutionConfigPanel
+                  settings={evolutionSettings}
+                  onSettingsChange={onEvolutionSettingsChange}
+                  seedOptions={geneticSeedOptions}
+                  selectedSeedNames={evolutionSeedNames}
+                  onSeedToggle={handleSeedToggle}
+                  onSeedSelectAll={handleSelectAllSeeds}
+                  onSeedClear={handleClearSeeds}
+                  errors={evolutionConfigurationErrors}
+                  evolutionEnabled={evolutionEnabled}
+                />
                 </div>
               </TabsContent>
             </Tabs>
@@ -470,6 +486,27 @@ function FadeSection({ active, children }: FadeSectionProps) {
       )}
     >
       {children}
+    </div>
+  );
+}
+
+function formatDuration(value?: number | null): string {
+  if (value === undefined || value === null || !Number.isFinite(value) || value <= 0) {
+    return '0.00s';
+  }
+  return `${(value / 1000).toFixed(2)}s`;
+}
+
+type RuntimeMetricProps = {
+  label: string;
+  value: string;
+};
+
+function RuntimeMetric({ label, value }: RuntimeMetricProps) {
+  return (
+    <div className="rounded-md border border-muted bg-background/70 px-2 py-1 text-right sm:text-left">
+      <p className="text-[0.65rem] uppercase leading-none">{label}</p>
+      <p className="text-sm font-medium text-foreground">{value}</p>
     </div>
   );
 }

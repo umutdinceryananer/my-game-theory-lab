@@ -1,5 +1,6 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import type { EvolutionSettings } from "@/core/evolution";
 import type { GeneticStrategyConfig } from "@/strategies/genetic";
@@ -14,6 +15,7 @@ interface EvolutionConfigPanelProps {
   onSeedSelectAll: () => void;
   onSeedClear: () => void;
   errors: string[];
+  evolutionEnabled: boolean;
 }
 
 export function EvolutionConfigPanel({
@@ -25,6 +27,7 @@ export function EvolutionConfigPanel({
   onSeedSelectAll,
   onSeedClear,
   errors,
+  evolutionEnabled,
 }: EvolutionConfigPanelProps) {
   const mutationOperatorOptions = useMemo(
     () => [
@@ -51,6 +54,12 @@ export function EvolutionConfigPanel({
     },
     [onSettingsChange, settings],
   );
+
+  useEffect(() => {
+    if (!evolutionEnabled && settings.profilingEnabled) {
+      onSettingsChange({ ...settings, profilingEnabled: false });
+    }
+  }, [evolutionEnabled, onSettingsChange, settings]);
 
   const coreFields = useMemo(
     () => (
@@ -181,6 +190,21 @@ export function EvolutionConfigPanel({
             <span className="text-[0.65rem] text-muted-foreground">{activeMutationOption.helper}</span>
           </label>
         </div>
+        <div className="flex items-center justify-between gap-3 rounded-md border border-muted bg-background/70 px-3 py-2">
+          <div className="space-y-1">
+            <p className="text-[0.65rem] font-semibold uppercase text-muted-foreground">Performance profiling</p>
+            <p className="text-xs text-muted-foreground">
+              Capture runtime metrics for each generation. Enabling this adds minimal overhead.
+              {!evolutionEnabled && ' (Enable evolutionary mode first.)'}
+            </p>
+          </div>
+          <Switch
+            checked={Boolean(settings.profilingEnabled)}
+            onCheckedChange={(value) => handleSetting('profilingEnabled', value)}
+            aria-label="Toggle performance profiling"
+            disabled={!evolutionEnabled}
+          />
+        </div>
         {settings.selectionMethod === 'tournament' && (
           <div className="grid gap-3 md:grid-cols-2">
             <label className="flex flex-col gap-1 text-[0.65rem] font-medium uppercase text-muted-foreground">
@@ -245,6 +269,7 @@ export function EvolutionConfigPanel({
       onSeedToggle,
       onSeedSelectAll,
       onSeedClear,
+      evolutionEnabled,
     ],
   );
 

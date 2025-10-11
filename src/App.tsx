@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LandingScreen } from "@/components/landing-screen";
 import { DEFAULT_PAYOFF_MATRIX, type PayoffMatrix, type Strategy } from "@/core/types";
@@ -359,4 +359,6 @@ export default function App() {
     </div>
   );
 }
+
+
 

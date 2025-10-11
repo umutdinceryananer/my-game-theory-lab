@@ -36,6 +36,7 @@ export interface EvolutionSettings {
   elitismCount: number;
   tournamentSize?: number;
   randomSeed?: number | string;
+  profilingEnabled?: boolean;
 }
 
 /**
@@ -61,6 +62,13 @@ export interface EvolutionMetrics {
   medianFitness: number | null;
   mutationCount: number;
   crossoverCount: number;
+  runtimeMs?: number;
+}
+
+export interface EvolutionRuntimeMetrics {
+  totalRuntimeMs: number;
+  averageGenerationMs: number;
+  generationDurations: number[];
 }
 
 /**
@@ -82,6 +90,7 @@ export interface EvolutionSummary {
   finalPopulation: PopulationIndividual[];
   history: GenerationSnapshot[];
   settings: EvolutionSettings;
+  runtimeMetrics?: EvolutionRuntimeMetrics;
 }
 
 /**
