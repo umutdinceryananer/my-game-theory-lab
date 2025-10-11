@@ -507,22 +507,28 @@ export function createBasicEvolutionEngine({
     }
 
     private resolveMutationRate(config?: GeneticStrategyConfig): number {
+      if (this.settings.mutationRate !== undefined && this.settings.mutationRate !== null) {
+        return Math.min(Math.max(this.settings.mutationRate, 0), 1);
+      }
       const rate =
         config && typeof config.mutationRate === 'number' && Number.isFinite(config.mutationRate)
           ? config.mutationRate
-          : this.settings.mutationRate;
-      return Math.min(Math.max(rate ?? 0, 0), 1);
+          : 0;
+      return Math.min(Math.max(rate, 0), 1);
     }
 
     private resolveCrossoverRate(parents: PopulationIndividual[]): number {
+      if (this.settings.crossoverRate !== undefined && this.settings.crossoverRate !== null) {
+        return Math.min(Math.max(this.settings.crossoverRate, 0), 1);
+      }
       const parentRates = parents
         .map((parent) => parent.config.crossoverRate)
         .filter((value): value is number => typeof value === 'number' && Number.isFinite(value));
       const baseRate =
         parentRates.length > 0
           ? parentRates.reduce((sum, value) => sum + value, 0) / parentRates.length
-          : this.settings.crossoverRate;
-      return Math.min(Math.max(baseRate ?? 1, 0), 1);
+          : 1;
+      return Math.min(Math.max(baseRate, 0), 1);
     }
   }
 
