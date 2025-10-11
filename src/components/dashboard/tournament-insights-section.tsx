@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
-import { ChevronDown, Trophy } from "lucide-react";
+import { ChevronDown, Download, Trophy } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HeadToHeadHeatMap, StrategySummaryInlineCard } from "@/components/analytics";
 import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
 import type { TournamentFormat, TournamentResult, SwissRoundSummary } from "@/core/tournament";
@@ -37,6 +38,7 @@ export function TournamentInsightsSection({
   const [activeInsightsPanel, setActiveInsightsPanel] = useState<"standings" | "heatmap">("standings");
   const [expandedStrategyName, setExpandedStrategyName] = useState<string | null>(null);
   const [roundsExpanded, setRoundsExpanded] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"csv" | "json">("csv");
 
   const { getSummary } = useTournamentAnalytics(results);
 
@@ -122,6 +124,25 @@ export function TournamentInsightsSection({
             )}
           </div>
           <p className="text-xs text-muted-foreground">{formatLabel}</p>
+        </div>
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+          <Select
+            value={exportFormat}
+            onValueChange={(value) => setExportFormat(value as "csv" | "json")}
+            disabled={!hasResults}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Export format" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="csv">CSV</SelectItem>
+              <SelectItem value="json">JSON</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button type="button" variant="outline" size="sm" disabled={!hasResults} className="gap-2">
+            <Download className="h-4 w-4" />
+            Download standings
+          </Button>
         </div>
       </div>
 
