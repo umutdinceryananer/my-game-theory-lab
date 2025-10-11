@@ -80,10 +80,7 @@ export function createBasicEvolutionEngine({
         const baseConfig = cloneGeneticConfig(seed);
         const genome = ensureGeneIds(baseConfig.genome);
         const mutationRate = this.resolveMutationRate(baseConfig);
-        const mutatedGenome =
-          mutationRate > 0
-            ? bitFlipMutation(genome, { mutationRate: mutationRate / 2, random })
-            : genome;
+        const { genome: mutatedGenome } = this.applyMutation(genome, random, mutationRate / 2);
         const config = {
           ...baseConfig,
           genome: mutatedGenome,
