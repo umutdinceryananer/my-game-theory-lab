@@ -17,6 +17,8 @@ import { useTournamentAnalytics } from "@/hooks/useTournamentAnalytics";
 import type { TournamentFormat, TournamentResult, SwissRoundSummary } from "@/core/tournament";
 import { cn } from "@/lib/utils";
 
+const ratingFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+
 interface TournamentInsightsSectionProps {
   results: TournamentResult[] | null;
   swissRounds: SwissRoundSummary[] | null;
@@ -147,6 +149,7 @@ export function TournamentInsightsSection({
                       <TableRow>
                         <TableHead className="w-28">Rank</TableHead>
                         <TableHead>Strategy</TableHead>
+                        <TableHead className="w-24 text-right">Elo</TableHead>
                         <TableHead className="w-24 text-right">Score</TableHead>
                         <TableHead className="w-24 text-right">Average</TableHead>
                         <TableHead className="w-20 text-right">Wins</TableHead>
@@ -189,6 +192,11 @@ export function TournamentInsightsSection({
                               {result.name}
                             </TableCell>
                             <TableCell className="text-right font-mono text-sm transition-colors duration-300">
+                              {result.rating !== undefined && result.rating !== null
+                                ? ratingFormatter.format(result.rating)
+                                : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-sm transition-colors duration-300">
                               {result.totalScore}
                             </TableCell>
                             <TableCell className="text-right font-mono text-sm transition-colors duration-300">
@@ -208,7 +216,7 @@ export function TournamentInsightsSection({
                           <Fragment key={result.name}>
                             {renderBaseRow()}
                             <TableRow key={`${result.name}-summary`} data-variant="summary" className="bg-muted/30">
-                              <TableCell colSpan={5} className="p-0">
+                            <TableCell colSpan={6} className="p-0">
                                 <div className="summary-fade px-4 py-3">
                                   <StrategySummaryInlineCard summary={summary} rank={index + 1} />
                                 </div>

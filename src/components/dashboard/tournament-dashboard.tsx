@@ -129,6 +129,10 @@ export function TournamentDashboard({
     }
   }, [results, expandedStrategyName]);
 
+  useEffect(() => {
+    setSettingsTab(evolutionEnabled ? "evolution" : "simulation");
+  }, [evolutionEnabled]);
+
   const minParticipants = evolutionEnabled ? 1 : 2;
   const evolutionAnalytics = useEvolutionAnalytics(evolutionSummary);
   const evolutionSettingsErrors = useMemo(

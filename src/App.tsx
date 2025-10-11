@@ -64,6 +64,10 @@ export default function App() {
   const [isRunning, setIsRunning] = useState(false);
   const baseStrategyList = useMemo<StrategyType[]>(() => [...baseStrategies], []);
   const [selectedStrategyNames, setSelectedStrategyNames] = useState<string[]>([]);
+  const geneticStrategyNames = useMemo(
+    () => Object.keys(geneticConfigs).sort((a, b) => a.localeCompare(b)),
+    [geneticConfigs],
+  );
 
   const results = tournamentOutcome?.results ?? null;
   const swissRounds = tournamentOutcome?.swissRounds ?? null;
@@ -281,6 +285,25 @@ export default function App() {
     [strategyOrder]
   );
 
+  const ensureGeneticStrategiesSelected = useCallback(() => {
+    if (geneticStrategyNames.length === 0) return;
+    setSelectedStrategyNames((previous) => {
+      const next = new Set(previous);
+      geneticStrategyNames.forEach((name) => {
+        if (strategyOrder.includes(name)) {
+          next.add(name);
+        }
+      });
+      return strategyOrder.filter((strategyName) => next.has(strategyName));
+    });
+  }, [geneticStrategyNames, strategyOrder]);
+
+  const removeGeneticStrategiesFromSelection = useCallback(() => {
+    if (geneticStrategyNames.length === 0) return;
+    const geneticSet = new Set(geneticStrategyNames);
+    setSelectedStrategyNames((previous) => previous.filter((name) => !geneticSet.has(name)));
+  }, [geneticStrategyNames]);
+
   const selectAll = useCallback(() => {
     setSelectedStrategyNames(strategyOrder);
   }, [strategyOrder]);
@@ -308,6 +331,32 @@ export default function App() {
     );
   }, []);
 
+  useEffect(() => {
+    if (!evolutionEnabled) return;
+    const geneticSet = new Set(geneticStrategyNames);
+    const hasGeneticSelected = selectedStrategyNames.some((name) => geneticSet.has(name));
+    if (!hasGeneticSelected) {
+      setEvolutionEnabled(false);
+    }
+  }, [evolutionEnabled, geneticStrategyNames, selectedStrategyNames]);
+
+  const handleEvolutionEnabledChange = useCallback(
+    (enabled: boolean) => {
+      if (enabled) {
+        if (geneticStrategyNames.length === 0) {
+          setEvolutionEnabled(false);
+          return;
+        }
+        ensureGeneticStrategiesSelected();
+        setEvolutionEnabled(true);
+      } else {
+        removeGeneticStrategiesFromSelection();
+        setEvolutionEnabled(false);
+      }
+    },
+    [ensureGeneticStrategiesSelected, geneticStrategyNames, removeGeneticStrategiesFromSelection],
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <main className="mx-auto flex min-h-screen w-full max-w-4xl lg:max-w-6xl flex-col justify-center px-6 py-12">
@@ -317,7 +366,7 @@ export default function App() {
             geneticConfigs={geneticConfigs}
             onGeneticConfigsChange={handleGeneticConfigsChange}
             evolutionEnabled={evolutionEnabled}
-            onEvolutionEnabledChange={setEvolutionEnabled}
+            onEvolutionEnabledChange={handleEvolutionEnabledChange}
             evolutionSettings={evolutionSettings}
             onEvolutionSettingsChange={handleEvolutionSettingsChange}
             evolutionSeedNames={evolutionSeedNames}

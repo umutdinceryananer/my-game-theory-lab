@@ -4,6 +4,7 @@ import type { StrategyAnalytics } from '@/hooks/useTournamentAnalytics';
 const integerFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 const decimalFormatter = new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const percentFormatter = new Intl.NumberFormat(undefined, { style: 'percent', maximumFractionDigits: 1 });
+const ratingFormatter = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
 
 type StrategySummaryInlineCardProps = {
   summary: StrategyAnalytics;
@@ -27,6 +28,7 @@ export function StrategySummaryInlineCard({ summary, rank }: StrategySummaryInli
       </div>
 
       <Metric label="Avg" value={decimalFormatter.format(summary.averageScore)} />
+      {summary.rating !== null ? <Metric label="Elo" value={ratingFormatter.format(summary.rating)} /> : null}
       <Metric label="Std Dev" value={decimalFormatter.format(summary.stdDeviation)} />
       <Metric label="Win %" value={percentFormatter.format(summary.winRate)} />
       <Metric label="Draw %" value={percentFormatter.format(summary.drawRate)} />

@@ -13,6 +13,10 @@ const decimalFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
+const ratingFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 0,
+});
+
 const percentFormatter = new Intl.NumberFormat(undefined, {
   style: "percent",
   maximumFractionDigits: 1,
@@ -44,10 +48,18 @@ export function StrategySummaryCard({ summary }: StrategySummaryCardProps) {
       <CardHeader className="space-y-2">
         <CardTitle className="flex items-center justify-between text-base">
           <span>{summary.name}</span>
-          <Badge variant="secondary" className="gap-1 uppercase">
-            <ShieldCheck className="h-3.5 w-3.5" />
-            {summary.wins}-{summary.draws}-{summary.losses}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {summary.rating !== null ? (
+              <Badge variant="outline" className="gap-1 text-[0.65rem] uppercase tracking-wide">
+                Elo
+                <span className="font-semibold">{ratingFormatter.format(summary.rating)}</span>
+              </Badge>
+            ) : null}
+            <Badge variant="secondary" className="gap-1 uppercase">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {summary.wins}-{summary.draws}-{summary.losses}
+            </Badge>
+          </div>
         </CardTitle>
         <CardDescription>
           {summary.matchesPlayed} matches · {integerFormatter.format(summary.totalScore)} total points

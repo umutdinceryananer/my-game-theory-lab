@@ -2,6 +2,8 @@ import type { Strategy, PayoffMatrix } from './types';
 import { DEFAULT_PAYOFF_MATRIX } from './types';
 import { PrisonersDilemmaGame } from './game';
 import { createRandomSource } from './random';
+import type { EloMatchResult } from '@/lib/rating/elo';
+import { processEloMatches } from '@/lib/rating/elo';
 
 export type TournamentFormatKind = 'single-round-robin' | 'double-round-robin' | 'swiss';
 
@@ -55,6 +57,7 @@ export interface TournamentOutcome {
   format: TournamentFormat;
   results: TournamentResult[];
   swissRounds?: SwissRoundSummary[];
+  ratings: Record<string, number>;
 }
 export interface HeadToHeadSummary {
   opponent: string;
@@ -75,6 +78,7 @@ export interface TournamentResult {
   wins: number;
   stdDeviation: number;
   headToHead: HeadToHeadSummary[];
+  rating?: number;
 }
 
 interface HeadToHeadStats {
@@ -105,9 +109,11 @@ export class Tournament {
     results: TournamentResult[];
     scores: number[][];
     headToHeadMaps: Map<string, HeadToHeadStats>[];
+    eloMatches: EloMatchResult[];
   } {
     const scores: number[][] = strategies.map(() => []);
     const headToHeadMaps: Map<string, HeadToHeadStats>[] = strategies.map(() => new Map());
+    const eloMatches: EloMatchResult[] = [];
     const results: TournamentResult[] = strategies.map((strategy) => ({
       name: strategy.name,
       totalScore: 0,
@@ -118,7 +124,7 @@ export class Tournament {
       headToHead: [],
     }));
 
-    return { results, scores, headToHeadMaps };
+    return { results, scores, headToHeadMaps, eloMatches };
   }
 
   private updateHeadToHead(
@@ -190,15 +196,15 @@ export class Tournament {
   ): TournamentOutcome {
     switch (format.kind) {
       case 'single-round-robin': {
-        const results = this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, false);
-        return { format, results };
+        const { results, ratings } = this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, false);
+        return { format, results, ratings };
       }
       case 'double-round-robin': {
-        const results = this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, true);
-        return { format, results };
+        const { results, ratings } = this.run(strategies, roundsPerMatch, errorRate, payoffMatrix, seed, true);
+        return { format, results, ratings };
       }
       case 'swiss': {
-        const { results, rounds } = this.runSwiss(
+        const { results, rounds, ratings } = this.runSwiss(
           format,
           strategies,
           roundsPerMatch,
@@ -206,7 +212,7 @@ export class Tournament {
           payoffMatrix,
           seed,
         );
-        return { format, results, swissRounds: rounds };
+        return { format, results, swissRounds: rounds, ratings };
       }
       default:
         return assertUnreachable(format as never);
@@ -223,14 +229,14 @@ export class Tournament {
     payoffMatrix: PayoffMatrix = DEFAULT_PAYOFF_MATRIX,
     seed?: number | string,
     doubleRoundRobin: boolean = false,
-  ): TournamentResult[] {
+  ): { results: TournamentResult[]; ratings: Record<string, number> } {
     if (strategies.length < 2) {
       throw new Error('Need at least 2 strategies');
     }
 
     const seededRandom = seed !== undefined ? createRandomSource(seed) : undefined;
 
-    const { results, scores, headToHeadMaps } = this.initializeState(strategies);
+    const { results, scores, headToHeadMaps, eloMatches } = this.initializeState(strategies);
 
     for (let i = 0; i < strategies.length; i++) {
       for (let j = i + 1; j < strategies.length; j++) {
@@ -258,6 +264,18 @@ export class Tournament {
         if (match.player1Score > match.player2Score) results[i].wins += 1;
         else if (match.player2Score > match.player1Score) results[j].wins += 1;
 
+        const outcome: EloMatchResult['outcome'] =
+          match.player1Score > match.player2Score
+            ? 'win'
+            : match.player2Score > match.player1Score
+            ? 'loss'
+            : 'draw';
+        eloMatches.push({
+          player: strategies[i].name,
+          opponent: strategies[j].name,
+          outcome,
+        });
+
         if (doubleRoundRobin) {
           const randomSourceRematch = seededRandom ?? createRandomSource();
           const rematch = this.game.playMatch(
@@ -282,11 +300,34 @@ export class Tournament {
 
           if (rematch.player2Score > rematch.player1Score) results[i].wins += 1;
           else if (rematch.player1Score > rematch.player2Score) results[j].wins += 1;
+
+          const rematchOutcome: EloMatchResult['outcome'] =
+            rematch.player2Score > rematch.player1Score
+              ? 'win'
+              : rematch.player1Score > rematch.player2Score
+              ? 'loss'
+              : 'draw';
+          eloMatches.push({
+            player: strategies[j].name,
+            opponent: strategies[i].name,
+            outcome: rematchOutcome,
+          });
         }
       }
     }
 
-    return this.finalizeResults(results, scores, headToHeadMaps);
+    const finalized = this.finalizeResults(results, scores, headToHeadMaps);
+    const ratings = processEloMatches(
+      Object.fromEntries(finalized.map((result) => [result.name, result.rating ?? undefined])),
+      eloMatches,
+    );
+
+    const enriched = finalized.map((result) => ({
+      ...result,
+      rating: ratings[result.name] ?? result.rating ?? null,
+    }));
+
+    return { results: enriched, ratings };
   }
 
   private runSwiss(
@@ -296,13 +337,13 @@ export class Tournament {
     errorRate: number,
     payoffMatrix: PayoffMatrix,
     seed?: number | string,
-  ): { results: TournamentResult[]; rounds: SwissRoundSummary[] } {
+  ): { results: TournamentResult[]; rounds: SwissRoundSummary[]; ratings: Record<string, number> } {
     if (strategies.length < 2) {
       throw new Error('Need at least 2 strategies');
     }
 
     const seededRandom = seed !== undefined ? createRandomSource(seed) : undefined;
-    const { results, scores, headToHeadMaps } = this.initializeState(strategies);
+    const { results, scores, headToHeadMaps, eloMatches } = this.initializeState(strategies);
 
     const pairHistory: Array<Set<number>> = strategies.map(() => new Set<number>());
     const byeHistory = new Set<number>();
@@ -454,6 +495,13 @@ export class Tournament {
           opponentScore: match.player2Score,
           winner,
         });
+        const outcome: EloMatchResult['outcome'] =
+          winner === 'player' ? 'win' : winner === 'opponent' ? 'loss' : 'draw';
+        eloMatches.push({
+          player: strategies[playerIndex].name,
+          opponent: strategies[opponentIndex].name,
+          outcome,
+        });
       });
 
       if (byePlayer !== null) {
@@ -524,8 +572,16 @@ export class Tournament {
     };
 
     const finalized = this.finalizeResults(results, scores, headToHeadMaps, sortResults);
+    const ratings = processEloMatches(
+      Object.fromEntries(finalized.map((result) => [result.name, result.rating ?? undefined])),
+      eloMatches,
+    );
+    const enriched = finalized.map((result) => ({
+      ...result,
+      rating: ratings[result.name] ?? result.rating ?? null,
+    }));
 
-    return { results: finalized, rounds: roundSummaries };
+    return { results: enriched, rounds: roundSummaries, ratings };
   }
 
 

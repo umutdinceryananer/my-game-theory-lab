@@ -11,6 +11,7 @@ export interface HeadToHeadAnalytics extends HeadToHeadSummary {
 
 export interface StrategyAnalytics {
   name: string;
+  rating: number | null;
   totalScore: number;
   averageScore: number;
   matchesPlayed: number;
@@ -67,6 +68,7 @@ function summarizeResult(result: TournamentResult): StrategyAnalytics {
 
   return {
     name: result.name,
+    rating: result.rating ?? null,
     totalScore: result.totalScore,
     averageScore: result.averageScore,
     matchesPlayed: matches,
