@@ -1,7 +1,12 @@
+import { useCallback, useRef, useState } from 'react';
+import { Download } from 'lucide-react';
+import type { Chart as ChartJS } from 'chart.js';
+
 import { EvolutionSummaryCard } from '@/components/analytics/evolution-summary';
 import { EvolutionLineChart } from '@/components/analytics/evolution-line-chart';
 import type { EvolutionRuntimeMetrics } from '@/core/evolution';
 import type { EvolutionAnalytics } from '@/hooks/useEvolutionAnalytics';
+import { Button } from '@/components/ui/button';
 
 interface EvolutionInsightsProps {
   analytics: EvolutionAnalytics;
@@ -18,6 +23,20 @@ export function EvolutionInsights({
   runtimeMetrics,
   profilingEnabled,
 }: EvolutionInsightsProps) {
+  const chartRef = useRef<ChartJS<'line'> | null>(null);
+  const [isChartReady, setIsChartReady] = useState(false);
+
+  const handleChartReady = useCallback((chart: ChartJS<'line'> | null) => {
+    chartRef.current = chart;
+    setIsChartReady(Boolean(chart));
+  }, [setIsChartReady]);
+
+  const handleExport = useCallback(() => {
+    if (!chartRef.current) {
+      return;
+    }
+  }, []);
+
   if (!enabled || !analytics.hasHistory) {
     return null;
   }
@@ -26,10 +45,29 @@ export function EvolutionInsights({
     profilingEnabled && runtimeMetrics && runtimeMetrics.generationDurations.length > 0,
   );
 
+  const exportDisabled = !isChartReady;
+
   return (
     <div className='space-y-4'>
       <EvolutionSummaryCard data={analytics} />
-      <EvolutionLineChart points={analytics.points} roundsPerMatch={roundsPerMatch} />
+      <EvolutionLineChart
+        points={analytics.points}
+        roundsPerMatch={roundsPerMatch}
+        onReady={handleChartReady}
+        actions={
+          <Button
+            type='button'
+            variant='outline'
+            size='sm'
+            className='gap-1.5'
+            onClick={handleExport}
+            disabled={exportDisabled}
+          >
+            <Download className='h-4 w-4' aria-hidden='true' />
+            Download PNG
+          </Button>
+        }
+      />
       {hasRuntimeMetrics && runtimeMetrics && (
         <div className='rounded-lg border border-muted bg-card/80 p-4'>
           <p className='text-sm font-semibold text-foreground'>Profiling metrics</p>

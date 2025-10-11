@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -20,12 +20,14 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip,
 export interface EvolutionLineChartProps {
   points: EvolutionMetricPoint[];
   roundsPerMatch: number;
+  onReady?: (chart: ChartJS<'line'> | null) => void;
+  actions?: ReactNode;
 }
 
 const formatNumber = (value: number) =>
   new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value);
 
-export function EvolutionLineChart({ points, roundsPerMatch }: EvolutionLineChartProps) {
+export function EvolutionLineChart({ points, roundsPerMatch, onReady, actions }: EvolutionLineChartProps) {
   const labels = useMemo(() => points.map((p) => p.generation), [points]);
   const divisor = roundsPerMatch > 0 ? roundsPerMatch : 1;
 
@@ -136,20 +138,37 @@ export function EvolutionLineChart({ points, roundsPerMatch }: EvolutionLineChar
   );
 
   const hasData = points.length > 0;
+  const handleChartRef = useCallback(
+    (chart: ChartJS<'line'> | null) => {
+      if (onReady) {
+        onReady(chart);
+      }
+    },
+    [onReady],
+  );
 
   return (
     <Card className="border-primary/30 bg-card">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base font-semibold">Evolution fitness trend</CardTitle>
-          <span className="text-xs uppercase text-muted-foreground">
-            {hasData ? `${points.length} points` : 'No history'}
-          </span>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base font-semibold">Evolution fitness trend</CardTitle>
+            <span className="text-xs uppercase text-muted-foreground">
+              {hasData ? `${points.length} points` : 'No history'}
+            </span>
+          </div>
+          {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
         </div>
       </CardHeader>
       <CardContent className={hasData ? 'h-64 sm:h-72' : 'py-6'}>
         {hasData ? (
-          <Line data={data} options={options} role="img" aria-label="Evolution fitness trend" />
+          <Line
+            data={data}
+            options={options}
+            role="img"
+            aria-label="Evolution fitness trend"
+            ref={handleChartRef}
+          />
         ) : (
           <p className="text-xs text-muted-foreground">Run the evolutionary loop to see fitness trends.</p>
         )}
