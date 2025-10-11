@@ -56,10 +56,16 @@ Interactive React/Vite sandbox for the iterated Prisoner's Dilemma. Strategies f
 
 Grab the latest packaged build from the GitHub **Releases** page. After downloading the ZIP, extract it and serve the `dist/` folder with any static server of your choice.
 
+## GitHub Pages Deployment
+
+- The project is published automatically via [deploy.yml](.github/workflows/deploy.yml). Every push to `main` builds the Vite bundle, copies `index.html` to `404.html` for SPA routing, and ships the `dist/` folder to GitHub Pages.
+- The site is served from [`https://umutdinceryananer.github.io/My-Game-Theory-Lab/`](https://umutdinceryananer.github.io/My-Game-Theory-Lab/). Because GitHub Pages hosts it under a sub-path, Vite’s `base` is set to `/My-Game-Theory-Lab/` in `vite.config.ts`.
+- To test locally, run `npm run build` and `npm run preview`; the generated output is the same bundle that the Pages workflow deploys.
+
 ## Deployment Status
 
 - Automated GitHub Actions release workflow builds and zips the production bundle whenever a `v*.*.*` tag is pushed (see badge above for the latest status).
-- No live hosting target is configured yet; distribute the app by downloading the most recent release artifact or hosting the `dist/` folder manually.
+- GitHub Pages serves the latest `main` build at [https://umutdinceryananer.github.io/My-Game-Theory-Lab/](https://umutdinceryananer.github.io/My-Game-Theory-Lab/); check the deployment workflow badge above for current status.
 
 ## Roadmap
 
