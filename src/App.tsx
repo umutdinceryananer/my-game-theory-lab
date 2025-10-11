@@ -10,7 +10,6 @@ import {
 } from "@/core/tournament";
 import { simulateTournament } from "@/test-game";
 import { baseStrategies } from "@/strategies";
-import type { GeneticStrategyConfig } from "@/strategies/genetic";
 import { createGeneticStrategy, geneticStrategyConfigs } from "@/strategies/genetic";
 import { serializeTournamentToCSV, serializeTournamentToJSON, type TournamentExportParameters, type TournamentExportPayload } from "@/lib/export/tournament";
 import { cloneGeneticConfigMap } from "@/strategies/genetic/utils";
@@ -46,9 +45,6 @@ export default function App() {
   const [strategySearch, setStrategySearch] = useState("");
   const [geneticConfigs, setGeneticConfigs] = useState<GeneticConfigMap>(() =>
     cloneGeneticConfigMap(geneticStrategyConfigs)
-  );
-  const [evolutionSeedNames, setEvolutionSeedNames] = useState<string[]>(() =>
-    Object.keys(geneticStrategyConfigs).sort((a, b) => a.localeCompare(b))
   );
   const [evolutionEnabled, setEvolutionEnabled] = useState(false);
   const [evolutionSettings, setEvolutionSettings] = useState<EvolutionSettings>({
@@ -102,23 +98,6 @@ export default function App() {
     });
   }, [strategyOrder]);
 
-  useEffect(() => {
-    setEvolutionSeedNames((previous) => {
-      const availableNames = Object.keys(geneticConfigs).sort((a, b) => a.localeCompare(b));
-      const previousSet = new Set(previous);
-      let next = availableNames.filter((name) => previousSet.has(name));
-      if (next.length === 0 && availableNames.length > 0) {
-        next = [...availableNames];
-      } else if (next.length > 0) {
-        const additions = availableNames.filter((name) => !previousSet.has(name));
-        next = [...next, ...additions];
-      }
-      if (next.length === previous.length && next.every((name, index) => name === previous[index])) {
-        return previous;
-      }
-      return next;
-    });
-  }, [geneticConfigs]);
 
   const activeStrategies = useMemo(
     () =>
@@ -132,15 +111,11 @@ export default function App() {
       if (isRunning) return;
       const minimumRequired = evolutionEnabled ? 1 : 2;
       if (activeStrategies.length < minimumRequired) return;
-      const seedPool = evolutionSeedNames
-        .map((name) => geneticConfigs[name])
-        .filter((config): config is GeneticStrategyConfig => Boolean(config));
+      const seedPool = Object.values(geneticConfigs);
       if (evolutionEnabled) {
         const issues = getEvolutionSettingsIssues(evolutionSettings);
         if (Object.keys(geneticConfigs).length === 0) {
           issues.push("Create at least one genetic configuration to seed the evolutionary run.");
-        } else if (seedPool.length === 0) {
-          issues.push("Select at least one genetic configuration for the seed pool.");
         }
         if (issues.length > 0) {
           console.warn("Evolution run blocked due to invalid settings:", issues);
@@ -250,7 +225,6 @@ export default function App() {
       roundsPerMatch,
       seedEnabled,
       seedValue,
-      evolutionSeedNames,
     ]);
 
   const handleGeneticConfigsChange = useCallback(
@@ -260,11 +234,6 @@ export default function App() {
     },
     []
   );
-
-  const handleEvolutionSeedsChange = useCallback((names: string[]) => {
-    setEvolutionSeedNames(names);
-    setEvolutionSummary(null);
-  }, []);
 
   const handleEvolutionSettingsChange = useCallback(
     (nextSettings: EvolutionSettings) => {
@@ -431,8 +400,6 @@ export default function App() {
             onEvolutionEnabledChange={handleEvolutionEnabledChange}
             evolutionSettings={evolutionSettings}
             onEvolutionSettingsChange={handleEvolutionSettingsChange}
-            evolutionSeedNames={evolutionSeedNames}
-            onEvolutionSeedsChange={handleEvolutionSeedsChange}
             evolutionSummary={evolutionSummary}
             isRunning={isRunning}
             results={results}

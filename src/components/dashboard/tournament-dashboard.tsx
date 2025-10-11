@@ -27,8 +27,6 @@ type TournamentDashboardProps = {
   onEvolutionEnabledChange: (enabled: boolean) => void;
   evolutionSettings: EvolutionSettings;
   onEvolutionSettingsChange: (settings: EvolutionSettings) => void;
-  evolutionSeedNames: string[];
-  onEvolutionSeedsChange: (names: string[]) => void;
   evolutionSummary: EvolutionSummary | null;
   isRunning: boolean;
   results: TournamentResult[] | null;
@@ -69,8 +67,6 @@ export function TournamentDashboard({
   onEvolutionEnabledChange,
   evolutionSettings,
   onEvolutionSettingsChange,
-  evolutionSeedNames,
-  onEvolutionSeedsChange,
   evolutionSummary,
   isRunning,
   results,
@@ -141,61 +137,13 @@ export function TournamentDashboard({
     () => (evolutionEnabled ? getEvolutionSettingsIssues(evolutionSettings) : []),
     [evolutionEnabled, evolutionSettings],
   );
-  const geneticSeedOptions = useMemo(
-    () => Object.values(geneticConfigs).sort((a, b) => a.name.localeCompare(b.name)),
-    [geneticConfigs],
-  );
-  const selectedSeedConfigs = useMemo(
-    () =>
-      evolutionSeedNames
-        .map((name) => geneticConfigs[name])
-        .filter((config): config is GeneticStrategyConfig => Boolean(config)),
-    [evolutionSeedNames, geneticConfigs],
-  );
-  const evolutionSeedIssues = useMemo(() => {
-    if (!evolutionEnabled) return [];
-    if (geneticSeedOptions.length === 0) {
-      return ["Create at least one genetic configuration to seed the evolutionary run."];
-    }
-    if (selectedSeedConfigs.length === 0) {
-      return ["Select at least one genetic configuration for the seed pool."];
-    }
-    return [];
-  }, [evolutionEnabled, geneticSeedOptions, selectedSeedConfigs]);
-  const evolutionConfigurationErrors = useMemo(
-    () => [...evolutionSettingsErrors, ...evolutionSeedIssues],
-    [evolutionSettingsErrors, evolutionSeedIssues],
-  );
-  const allSeedNames = useMemo(
-    () => geneticSeedOptions.map((config) => config.name),
-    [geneticSeedOptions],
-  );
+  const evolutionConfigurationErrors = evolutionSettingsErrors;
   const runtimeMetrics = evolutionSummary?.runtimeMetrics ?? null;
   const totalRuntimeDisplay = formatDuration(runtimeMetrics?.totalRuntimeMs);
   const averageGenerationDisplay = formatDuration(runtimeMetrics?.averageGenerationMs);
   const generationCountDisplay = runtimeMetrics
     ? runtimeMetrics.generationDurations.length.toString()
     : "0";
-  const handleSeedToggle = useCallback(
-    (name: string) => {
-      const nameSet = new Set(evolutionSeedNames);
-      if (nameSet.has(name)) {
-        nameSet.delete(name);
-      } else {
-        nameSet.add(name);
-      }
-      const ordered = allSeedNames.filter((seedName) => nameSet.has(seedName));
-      onEvolutionSeedsChange(ordered);
-    },
-    [allSeedNames, evolutionSeedNames, onEvolutionSeedsChange],
-  );
-  const handleSelectAllSeeds = useCallback(() => {
-    onEvolutionSeedsChange(allSeedNames);
-  }, [allSeedNames, onEvolutionSeedsChange]);
-  const handleClearSeeds = useCallback(() => {
-    onEvolutionSeedsChange([]);
-  }, [onEvolutionSeedsChange]);
-
   const filteredSelectedStrategies = useMemo(() => {
     const query = strategySearch.trim().toLowerCase();
     return availableStrategies.filter((strategy) => {
@@ -430,29 +378,30 @@ export function TournamentDashboard({
                         </span>
                       )}
                     </div>
-                    {evolutionEnabled && insufficientOpponents && (
-                      <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                        Select at least {minParticipants} opponent
-                        {minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
-                      </div>
-                    )}
+                {evolutionEnabled && insufficientOpponents && (
+                  <div className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    Select at least {minParticipants} opponent
+                    {minParticipants === 1 ? "" : "s"} to run the evolutionary cycle.
                   </div>
+                )}
+              </div>
+              {evolutionEnabled ? (
                 <EvolutionConfigPanel
                   settings={evolutionSettings}
                   onSettingsChange={onEvolutionSettingsChange}
-                  seedOptions={geneticSeedOptions}
-                  selectedSeedNames={evolutionSeedNames}
-                  onSeedToggle={handleSeedToggle}
-                  onSeedSelectAll={handleSelectAllSeeds}
-                  onSeedClear={handleClearSeeds}
                   errors={evolutionConfigurationErrors}
                   evolutionEnabled={evolutionEnabled}
                 />
+              ) : (
+                <div className="rounded-lg border border-dashed border-muted/60 bg-muted/10 p-4 text-xs text-muted-foreground">
+                  Enable evolutionary mode to access population, selection, and seed settings.
                 </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </Card>
+              )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </Card>
       </div>
     </>
   );

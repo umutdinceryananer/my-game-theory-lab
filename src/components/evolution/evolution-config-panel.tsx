@@ -4,17 +4,10 @@ import { Switch } from "@/components/ui/switch";
 import { TooltipHint } from "@/components/ui/tooltip-hint";
 import { cn } from "@/lib/utils";
 import type { EvolutionSettings } from "@/core/evolution";
-import type { GeneticStrategyConfig } from "@/strategies/genetic";
-import { EvolutionSeedManager } from "./evolution-seed-manager";
 
 interface EvolutionConfigPanelProps {
   settings: EvolutionSettings;
   onSettingsChange: (settings: EvolutionSettings) => void;
-  seedOptions: GeneticStrategyConfig[];
-  selectedSeedNames: string[];
-  onSeedToggle: (name: string) => void;
-  onSeedSelectAll: () => void;
-  onSeedClear: () => void;
   errors: string[];
   evolutionEnabled: boolean;
 }
@@ -22,11 +15,6 @@ interface EvolutionConfigPanelProps {
 export function EvolutionConfigPanel({
   settings,
   onSettingsChange,
-  seedOptions,
-  selectedSeedNames,
-  onSeedToggle,
-  onSeedSelectAll,
-  onSeedClear,
   errors,
   evolutionEnabled,
 }: EvolutionConfigPanelProps) {
@@ -275,13 +263,6 @@ export function EvolutionConfigPanel({
             </label>
           </div>
         )}
-        <EvolutionSeedManager
-          options={seedOptions}
-          selectedNames={selectedSeedNames}
-          onToggle={onSeedToggle}
-          onSelectAll={onSeedSelectAll}
-          onClear={onSeedClear}
-        />
       </div>
     ),
     [
@@ -289,19 +270,14 @@ export function EvolutionConfigPanel({
       tournamentSizeValue,
       tournamentSizeInvalid,
       elitismInvalid,
-      seedOptions,
-      selectedSeedNames,
       activeMutationOption,
       mutationOperatorOptions,
       handleSetting,
-      onSeedToggle,
-      onSeedSelectAll,
-      onSeedClear,
       evolutionEnabled,
     ],
   );
 
-    return (
+  return (
     <div className="space-y-4">
       {coreFields}
       {advancedFields}
