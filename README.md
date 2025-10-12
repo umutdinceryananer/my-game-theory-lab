@@ -81,35 +81,33 @@ My-Game-Theory-Lab/
 
 ```mermaid
 flowchart LR
-    subgraph UI[Client UI]
-        Panels[Synthesis & Simulation Panels]
-        Dashboard[Dashboard & Insights]
-        GeneticEditor[Genetic Strategy Editor]
+    subgraph UI["Client UI"]
+        Panels["Simulation Panels"]
+        Dashboard["Dashboard & Insights"]
+        GeneticEditor["Genetic Strategy Editor"]
     end
 
-    subgraph Core[Simulation & Evolution]
-        TournamentEngine[Tournament Engine
-(src/core/tournament)]
-        EvolutionEngine[Evolution Engine
-(src/core/evolutionEngine)]
-        Strategies[strategies/
-Classic + Genetic]
+    subgraph Core["Simulation & Evolution"]
+        TournamentEngine["Tournament Engine<br/>src/core/tournament.ts"]
+        EvolutionEngine["Evolution Engine<br/>src/core/evolutionEngine.ts"]
+        Strategies["Strategies<br/>src/strategies"]
     end
 
-    subgraph Analytics[Analytics & Hooks]
-        AnalyticsViews[Analytics Components]
-        Hooks[Custom Hooks]
+    subgraph Analytics["Analytics & Hooks"]
+        AnalyticsViews["Analytics Views"]
+        HooksNode["Custom Hooks"]
     end
 
     Panels -->|configure| TournamentEngine
-    Panels -->|enable seeds| EvolutionEngine
+    Panels -->|enable evolution| EvolutionEngine
     GeneticEditor -->|edit genomes| Strategies
+    Strategies --> EvolutionEngine
     EvolutionEngine -->|inject champion| TournamentEngine
     TournamentEngine -->|results| Dashboard
     TournamentEngine -->|history| AnalyticsViews
     EvolutionEngine -->|metrics| AnalyticsViews
-    AnalyticsViews --> Hooks
-    Hooks --> Panels
+    AnalyticsViews --> HooksNode
+    HooksNode --> Panels
 ```
 
 ---
