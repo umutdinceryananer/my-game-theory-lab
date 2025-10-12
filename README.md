@@ -137,8 +137,7 @@ Serve `dist/` with any static host (Vercel, Netlify, Cloudflare Pages, etc.). Re
 - **Evolution analytics:** richer charts for genome convergence, mutation impact, round-by-round fitness.
 - **Strategy insights:** additional dashboards for head-to-head differentials and payoff distributions.
 - **Import/export:** shareable strategy bundles and evolutionary run snapshots.
-- **AI opponents:** plug in reinforcement-learning agents for more adaptive competition.
-
+  
 ---
 
 ## Contributing
