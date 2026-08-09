@@ -1,12 +1,12 @@
-﻿![CI](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/ci.yml/badge.svg?branch=main)
-![Deploy](https://github.com/umutdinceryananer/My-Game-Theory-Lab/actions/workflows/deploy.yml/badge.svg?branch=main)
+﻿![CI](https://github.com/umutdinceryananer/my-game-theory-lab/actions/workflows/ci.yml/badge.svg?branch=main)
+![Deploy](https://github.com/umutdinceryananer/my-game-theory-lab/actions/workflows/deploy.yml/badge.svg?branch=main)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
 # Game Theory Lab
 
 Interactive React/Vite sandbox for the Iterated Prisoner's Dilemma. Configure tournaments, evolve new competitors, and analyse how cooperation emerges (or collapses) across repeated play.
 
-> 🔗 **Live demo:** [umutdinceryananer.github.io/My-Game-Theory-Lab](https://umutdinceryananer.github.io/My-Game-Theory-Lab/)
+> 🔗 **Live demo:** [umutdinceryananer.github.io/my-game-theory-lab](https://umutdinceryananer.github.io/my-game-theory-lab/)
 
 ---
 
@@ -30,8 +30,8 @@ Interactive React/Vite sandbox for the Iterated Prisoner's Dilemma. Configure to
 ## Quick start
 
 ```bash
-git clone https://github.com/umutdinceryananer/My-Game-Theory-Lab.git
-cd My-Game-Theory-Lab
+git clone https://github.com/umutdinceryananer/my-game-theory-lab.git
+cd my-game-theory-lab
 npm install
 npm run dev
 ```
@@ -56,7 +56,7 @@ Vite prints a local URL (default: http://localhost:5173). Open it—keeping DevT
 ## Project structure
 
 ```text
-My-Game-Theory-Lab/
+my-game-theory-lab/
 ├─ src/
 │  ├─ core/              # Tournament engine, evolution logic
 │  ├─ strategies/        # Classic and genetic strategy definitions
@@ -179,8 +179,8 @@ Want to tinker? Start here:
 - Workflow: [.github/workflows/deploy.yml](.github/workflows/deploy.yml)
 - Trigger: every push to `main`
 - Steps: install dependencies → build → copy `index.html` → `404.html` → upload artifact → deploy with `actions/deploy-pages`
-- Live URL: https://umutdinceryananer.github.io/My-Game-Theory-Lab/
-- Vite config: `base` is set to `/My-Game-Theory-Lab/` for repo-subpath hosting.
+- Live URL: https://umutdinceryananer.github.io/my-game-theory-lab/
+- Vite config: `base` is set to `/my-game-theory-lab/` for repo-subpath hosting.
 
 ### Manual
 

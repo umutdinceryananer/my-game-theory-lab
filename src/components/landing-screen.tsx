@@ -107,7 +107,7 @@ export function LandingScreen({ onStart, isFadingOut }: LandingScreenProps) {
             Enter the Lab
           </Button>
           <Button variant="outline" className="h-11 w-full sm:w-auto" asChild>
-            <a href="https://github.com/umutdinceryananer/My-Game-Theory-Lab#readme" target="_blank" rel="noreferrer">
+            <a href="https://github.com/umutdinceryananer/my-game-theory-lab#readme" target="_blank" rel="noreferrer">
               View project guide
             </a>
           </Button>

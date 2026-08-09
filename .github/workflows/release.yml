@@ -24,10 +24,10 @@ jobs:
       - name: Archive dist
         run: |
           mkdir -p out
-          cd dist && zip -r ../out/My-Game-Theory-Lab-${GITHUB_REF_NAME}.zip .
+          cd dist && zip -r ../out/my-game-theory-lab-${GITHUB_REF_NAME}.zip .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: out/My-Game-Theory-Lab-${{ github.ref_name }}.zip
+          files: out/my-game-theory-lab-${{ github.ref_name }}.zip
           generate_release_notes: true
